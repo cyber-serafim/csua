@@ -36,12 +36,12 @@ const Contact = () => {
     {
       icon: Mail,
       title: { uk: 'Email', en: 'Email' },
-      value: 'info@compitservice.com'
+      value: 'info@csua.biz.ua'
     },
     {
       icon: Phone,
       title: { uk: 'Телефон', en: 'Phone' },
-      value: '+380 (XX) XXX-XX-XX'
+      value: '+380 (95) 8-777-99-7'
     },
     {
       icon: MapPin,
