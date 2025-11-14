@@ -10,7 +10,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
-              CompIT Service
+              CyberSecurity Ukraine
             </h3>
             <p className="text-muted-foreground">
               {t({
@@ -43,13 +43,13 @@ export const Footer = () => {
               {t({ uk: 'Контакти', en: 'Contact' })}
             </h4>
             <div className="text-muted-foreground space-y-2">
-              <p>Email: info@compitservice.com</p>
-              <p>Tel: +380 (XX) XXX-XX-XX</p>
+              <p>Email: info@csua.biz.ua</p>
+              <p>Tel: +380 (95) 8-777-99-7</p>
             </div>
           </div>
         </div>
         <div className="mt-8 pt-8 border-t border-border text-center text-muted-foreground">
-          <p>© 2024 CompIT Service. {t({ uk: 'Всі права захищені.', en: 'All rights reserved.' })}</p>
+          <p>© 2024 CyberSecurity Ukraine. {t({ uk: 'Всі права захищені.', en: 'All rights reserved.' })}</p>
         </div>
       </div>
     </footer>
