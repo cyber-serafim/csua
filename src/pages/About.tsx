@@ -54,8 +54,8 @@ const About = () => {
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
               {t({
-                uk: 'CompIT Service - це команда професіоналів, які допомагають бізнесу досягати успіху через інноваційні IT-рішення.',
-                en: 'CompIT Service is a team of professionals who help businesses succeed through innovative IT solutions.'
+                uk: 'CyberSecurity Ukraine - це команда професіоналів, які допомагають бізнесу досягати успіху через інноваційні IT-рішення.',
+                en: 'CyberSecurity Ukraine is a team of professionals who help businesses succeed through innovative IT solutions.'
               })}
             </p>
           </div>
@@ -76,8 +76,8 @@ const About = () => {
               </h2>
               <p className="text-muted-foreground leading-relaxed">
                 {t({
-                  uk: 'Заснована в 2020 році, компанія CompIT Service швидко зарекомендувала себе як надійний партнер для бізнесу різного масштабу. За цей час ми реалізували десятки успішних проектів та допомогли багатьом компаніям вийти на новий рівень розвитку.',
-                  en: 'Founded in 2020, CompIT Service has quickly established itself as a reliable partner for businesses of all sizes. During this time, we have implemented dozens of successful projects and helped many companies reach a new level of development.'
+                  uk: 'Заснована в 2020 році, компанія CyberSecurity Ukraine швидко зарекомендувала себе як надійний партнер для бізнесу різного масштабу. За цей час ми реалізували десятки успішних проектів та допомогли багатьом компаніям вийти на новий рівень розвитку.',
+                  en: 'Founded in 2020, CyberSecurity Ukraine has quickly established itself as a reliable partner for businesses of all sizes. During this time, we have implemented dozens of successful projects and helped many companies reach a new level of development.'
                 })}
               </p>
             </CardContent>
