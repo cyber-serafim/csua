@@ -2,7 +2,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Code, Server, Shield, Zap, Cloud, Database, Lock, Smartphone } from 'lucide-react';
+import { Code, Server, Shield, Zap, Cloud, Database, Lock, Smartphone, FileSearch, Camera, DoorOpen, Bell } from 'lucide-react';
 
 const Services = () => {
   const { t } = useLanguage();
@@ -70,6 +70,38 @@ const Services = () => {
       description: {
         uk: 'Розробка кросплатформних мобільних додатків для iOS та Android. Нативна якість з єдиною кодовою базою.',
         en: 'Development of cross-platform mobile applications for iOS and Android. Native quality with a single codebase.'
+      }
+    },
+    {
+      icon: FileSearch,
+      title: { uk: 'ІТ Аудит', en: 'IT Audit' },
+      description: {
+        uk: 'Комплексний аналіз ІТ-інфраструктури вашої компанії. Виявлення вразливостей, оцінка ризиків та рекомендації щодо покращення безпеки.',
+        en: 'Comprehensive analysis of your company\'s IT infrastructure. Identifying vulnerabilities, risk assessment and security improvement recommendations.'
+      }
+    },
+    {
+      icon: Camera,
+      title: { uk: 'Відеоспостереження', en: 'Video Surveillance' },
+      description: {
+        uk: 'Проектування та встановлення систем відеоспостереження. IP-камери, архівація відео, віддалений доступ та інтелектуальна аналітика.',
+        en: 'Design and installation of video surveillance systems. IP cameras, video archiving, remote access and intelligent analytics.'
+      }
+    },
+    {
+      icon: DoorOpen,
+      title: { uk: 'Системи контролю доступу', en: 'Access Control Systems' },
+      description: {
+        uk: 'Впровадження сучасних систем контролю та обліку доступу. Картки, біометрія, контроль проходу та інтеграція з іншими системами безпеки.',
+        en: 'Implementation of modern access control and accounting systems. Cards, biometrics, passage control and integration with other security systems.'
+      }
+    },
+    {
+      icon: Bell,
+      title: { uk: 'Охоронна сигналізація', en: 'Security Alarm Systems' },
+      description: {
+        uk: 'Встановлення та налаштування охоронних систем. Датчики руху, протипожежна сигналізація, централізований моніторинг та швидке реагування.',
+        en: 'Installation and configuration of security systems. Motion sensors, fire alarms, centralized monitoring and rapid response.'
       }
     }
   ];
