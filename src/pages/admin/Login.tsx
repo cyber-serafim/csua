@@ -12,6 +12,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -45,12 +46,49 @@ const Login = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({
+        title: t({ uk: 'Помилка', en: 'Error' }),
+        description: t({ uk: 'Введіть email адресу', en: 'Please enter your email address' }),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin/login`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: t({ uk: 'Перевірте пошту', en: 'Check your email' }),
+        description: t({ 
+          uk: 'Посилання для скидання пароля надіслано на вашу пошту', 
+          en: 'Password reset link has been sent to your email' 
+        }),
+      });
+    } catch (error: any) {
+      toast({
+        title: t({ uk: 'Помилка', en: 'Error' }),
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
       <Card className="w-full max-w-md shadow-large">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl bg-gradient-primary bg-clip-text text-transparent">
-            CompIT Service
+            CyberSecurity Ukraine
           </CardTitle>
           <CardDescription>
             {t({ uk: 'Адміністративна панель', en: 'Admin Panel' })}
@@ -82,6 +120,18 @@ const Login = () => {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? t({ uk: 'Завантаження...', en: 'Loading...' }) : t({ uk: 'Увійти', en: 'Login' })}
+            </Button>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              className="w-full text-muted-foreground hover:text-foreground"
+              onClick={handleForgotPassword}
+              disabled={resetLoading}
+            >
+              {resetLoading 
+                ? t({ uk: 'Надсилання...', en: 'Sending...' }) 
+                : t({ uk: 'Забули пароль?', en: 'Forgot password?' })
+              }
             </Button>
           </form>
         </CardContent>
