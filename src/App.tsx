@@ -10,6 +10,8 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
+import SetPassword from "./pages/admin/SetPassword";
+import AuthCallback from "./pages/admin/AuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin/login" element={<Login />} />
             <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/set-password" element={<SetPassword />} />
+            <Route path="/admin/auth/callback" element={<AuthCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
