@@ -125,9 +125,15 @@ const PagesList = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-                  <Button 
+              <Button 
                     className="flex-1"
-                    onClick={() => navigate(`/admin/pages/${page.slug}`)}
+                    onClick={() => {
+                      if (page.slug === 'services') {
+                        navigate('/admin/services');
+                      } else {
+                        navigate(`/admin/pages/${page.slug}`);
+                      }
+                    }}
                   >
                     <Edit className="mr-2 h-4 w-4" />
                     {t({ uk: 'Редагувати', en: 'Edit' })}

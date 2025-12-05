@@ -146,6 +146,71 @@ export type Database = {
         }
         Relationships: []
       }
+      service_translations: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          language: string
+          service_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          language: string
+          service_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          language?: string
+          service_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_translations_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          created_at: string | null
+          icon_name: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
