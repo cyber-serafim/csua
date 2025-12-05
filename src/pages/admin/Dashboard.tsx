@@ -97,9 +97,9 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">
+              <Button className="w-full" onClick={() => navigate('/admin/pages')}>
                 <Plus className="mr-2 h-4 w-4" />
-                {t({ uk: 'Створити сторінку', en: 'Create Page' })}
+                {t({ uk: 'Керувати сторінками', en: 'Manage Pages' })}
               </Button>
             </CardContent>
           </Card>
