@@ -1,110 +1,74 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Code, Server, Shield, Zap, Cloud, Database, Lock, Smartphone, FileSearch, Camera, DoorOpen, Bell } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import * as Icons from 'lucide-react';
+
+interface ServiceData {
+  id: string;
+  icon_name: string;
+  title: { uk: string; en: string };
+  description: { uk: string; en: string };
+}
 
 const Services = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const [services, setServices] = useState<ServiceData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const services = [
-    {
-      icon: Code,
-      title: { uk: 'Веб-розробка', en: 'Web Development' },
-      description: {
-        uk: 'Розробка сучасних, швидких та надійних веб-додатків з використанням новітніх технологій. Від простих лендінгів до складних корпоративних систем.',
-        en: 'Development of modern, fast and reliable web applications using the latest technologies. From simple landing pages to complex corporate systems.'
-      }
-    },
-    {
-      icon: Server,
-      title: { uk: 'Серверні рішення', en: 'Server Solutions' },
-      description: {
-        uk: 'Налаштування, підтримка та оптимізація серверної інфраструктури. Забезпечуємо надійну роботу ваших систем 24/7.',
-        en: 'Setup, maintenance and optimization of server infrastructure. We ensure reliable operation of your systems 24/7.'
-      }
-    },
-    {
-      icon: Shield,
-      title: { uk: 'Кібербезпека', en: 'Cybersecurity' },
-      description: {
-        uk: 'Комплексний захист ваших даних та систем від кіберзагроз. Аудит безпеки, впровадження захисних механізмів та моніторинг.',
-        en: 'Comprehensive protection of your data and systems from cyber threats. Security audits, implementation of protective mechanisms and monitoring.'
-      }
-    },
-    {
-      icon: Zap,
-      title: { uk: 'Оптимізація продуктивності', en: 'Performance Optimization' },
-      description: {
-        uk: 'Аналіз та покращення швидкодії ваших додатків та систем. Підвищуємо ефективність та знижуємо витрати на інфраструктуру.',
-        en: 'Analysis and improvement of your applications and systems performance. We increase efficiency and reduce infrastructure costs.'
-      }
-    },
-    {
-      icon: Cloud,
-      title: { uk: 'Хмарні рішення', en: 'Cloud Solutions' },
-      description: {
-        uk: 'Міграція в хмару, налаштування хмарної інфраструктури. Працюємо з AWS, Azure, Google Cloud та іншими провайдерами.',
-        en: 'Cloud migration, cloud infrastructure setup. We work with AWS, Azure, Google Cloud and other providers.'
-      }
-    },
-    {
-      icon: Database,
-      title: { uk: 'Бази даних', en: 'Databases' },
-      description: {
-        uk: 'Проектування, налаштування та оптимізація баз даних. Забезпечуємо швидкий доступ до даних та їх надійне зберігання.',
-        en: 'Database design, setup and optimization. We ensure fast data access and reliable storage.'
-      }
-    },
-    {
-      icon: Lock,
-      title: { uk: 'Системи автентифікації', en: 'Authentication Systems' },
-      description: {
-        uk: 'Впровадження надійних систем авторизації та автентифікації користувачів. SSO, двофакторна автентифікація, біометрія.',
-        en: 'Implementation of reliable user authorization and authentication systems. SSO, two-factor authentication, biometrics.'
-      }
-    },
-    {
-      icon: Smartphone,
-      title: { uk: 'Мобільні додатки', en: 'Mobile Applications' },
-      description: {
-        uk: 'Розробка кросплатформних мобільних додатків для iOS та Android. Нативна якість з єдиною кодовою базою.',
-        en: 'Development of cross-platform mobile applications for iOS and Android. Native quality with a single codebase.'
-      }
-    },
-    {
-      icon: FileSearch,
-      title: { uk: 'ІТ Аудит', en: 'IT Audit' },
-      description: {
-        uk: 'Комплексний аналіз ІТ-інфраструктури вашої компанії. Виявлення вразливостей, оцінка ризиків та рекомендації щодо покращення безпеки.',
-        en: 'Comprehensive analysis of your company\'s IT infrastructure. Identifying vulnerabilities, risk assessment and security improvement recommendations.'
-      }
-    },
-    {
-      icon: Camera,
-      title: { uk: 'Відеоспостереження', en: 'Video Surveillance' },
-      description: {
-        uk: 'Проектування та встановлення систем відеоспостереження. IP-камери, архівація відео, віддалений доступ та інтелектуальна аналітика.',
-        en: 'Design and installation of video surveillance systems. IP cameras, video archiving, remote access and intelligent analytics.'
-      }
-    },
-    {
-      icon: DoorOpen,
-      title: { uk: 'Системи контролю доступу', en: 'Access Control Systems' },
-      description: {
-        uk: 'Впровадження сучасних систем контролю та обліку доступу. Картки, біометрія, контроль проходу та інтеграція з іншими системами безпеки.',
-        en: 'Implementation of modern access control and accounting systems. Cards, biometrics, passage control and integration with other security systems.'
-      }
-    },
-    {
-      icon: Bell,
-      title: { uk: 'Охоронна сигналізація', en: 'Security Alarm Systems' },
-      description: {
-        uk: 'Встановлення та налаштування охоронних систем. Датчики руху, протипожежна сигналізація, централізований моніторинг та швидке реагування.',
-        en: 'Installation and configuration of security systems. Motion sensors, fire alarms, centralized monitoring and rapid response.'
-      }
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    const { data, error } = await supabase
+      .from('services')
+      .select(`
+        id,
+        icon_name,
+        service_translations (
+          language,
+          title,
+          description
+        )
+      `)
+      .eq('is_active', true)
+      .order('sort_order');
+
+    if (error) {
+      console.error('Error loading services:', error);
+      setIsLoading(false);
+      return;
     }
-  ];
+
+    const formattedServices: ServiceData[] = (data || []).map((service: any) => {
+      const ukTrans = service.service_translations?.find((t: any) => t.language === 'uk');
+      const enTrans = service.service_translations?.find((t: any) => t.language === 'en');
+      
+      return {
+        id: service.id,
+        icon_name: service.icon_name,
+        title: {
+          uk: ukTrans?.title || '',
+          en: enTrans?.title || ''
+        },
+        description: {
+          uk: ukTrans?.description || '',
+          en: enTrans?.description || ''
+        }
+      };
+    });
+
+    setServices(formattedServices);
+    setIsLoading(false);
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const IconComponent = (Icons as any)[iconName];
+    return IconComponent || Icons.Briefcase;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -123,27 +87,36 @@ const Services = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service, index) => (
-            <Card 
-              key={index} 
-              className="hover:shadow-large transition-all duration-300 hover:-translate-y-1 animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <CardHeader>
-                <div className="w-14 h-14 bg-gradient-primary rounded-xl flex items-center justify-center mb-4 shadow-medium">
-                  <service.icon className="h-7 w-7 text-primary-foreground" />
-                </div>
-                <CardTitle className="text-xl">{t(service.title)}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base leading-relaxed">
-                  {t(service.description)}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <p className="text-muted-foreground">{t({ uk: 'Завантаження...', en: 'Loading...' })}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {services.map((service, index) => {
+              const IconComponent = getIconComponent(service.icon_name);
+              return (
+                <Card 
+                  key={service.id} 
+                  className="hover:shadow-large transition-all duration-300 hover:-translate-y-1 animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <CardHeader>
+                    <div className="w-14 h-14 bg-gradient-primary rounded-xl flex items-center justify-center mb-4 shadow-medium">
+                      <IconComponent className="h-7 w-7 text-primary-foreground" />
+                    </div>
+                    <CardTitle className="text-xl">{t(service.title)}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base leading-relaxed">
+                      {t(service.description)}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <Footer />
