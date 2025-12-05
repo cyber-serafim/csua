@@ -12,6 +12,8 @@ import Login from "./pages/admin/Login";
 import Dashboard from "./pages/admin/Dashboard";
 import SetPassword from "./pages/admin/SetPassword";
 import AuthCallback from "./pages/admin/AuthCallback";
+import PagesList from "./pages/admin/PagesList";
+import PageEditor from "./pages/admin/PageEditor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/set-password" element={<SetPassword />} />
             <Route path="/admin/auth/callback" element={<AuthCallback />} />
+            <Route path="/admin/pages" element={<PagesList />} />
+            <Route path="/admin/pages/:slug" element={<PageEditor />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
