@@ -31,6 +31,13 @@ interface PageContent {
   contactEmail?: string;
   contactPhone?: string;
   contactAddress?: { uk: string; en: string };
+  // About page specific fields
+  aboutMission?: { uk: string; en: string };
+  aboutHistory?: { uk: string; en: string };
+  aboutValues?: Array<{
+    title: { uk: string; en: string };
+    description: { uk: string; en: string };
+  }>;
 }
 
 const defaultContent: Record<string, PageContent> = {
@@ -77,10 +84,24 @@ const defaultContent: Record<string, PageContent> = {
       en: 'About Us' 
     },
     heroSubtitle: { 
-      uk: 'CyberSecurity Ukraine - це команда професіоналів, які допомагають бізнесу досягати успіху', 
-      en: 'CyberSecurity Ukraine is a team of professionals who help businesses succeed' 
+      uk: 'CyberSecurity Ukraine - це команда професіоналів, які допомагають бізнесу досягати успіху через інноваційні IT-рішення.', 
+      en: 'CyberSecurity Ukraine is a team of professionals who help businesses succeed through innovative IT solutions.' 
     },
-    sections: []
+    sections: [],
+    aboutMission: {
+      uk: 'Наша місія - надавати найкращі IT-рішення, які допомагають нашим клієнтам оптимізувати бізнес-процеси, підвищити ефективність та досягати стратегічних цілей. Ми віримо, що технології повинні бути доступними, зрозумілими та приносити реальну цінність.',
+      en: 'Our mission is to provide the best IT solutions that help our clients optimize business processes, increase efficiency and achieve strategic goals. We believe that technology should be accessible, understandable and bring real value.'
+    },
+    aboutHistory: {
+      uk: 'Заснована в 2020 році, компанія CyberSecurity Ukraine швидко зарекомендувала себе як надійний партнер для бізнесу різного масштабу. За цей час ми реалізували десятки успішних проектів та допомогли багатьом компаніям вийти на новий рівень розвитку.',
+      en: 'Founded in 2020, CyberSecurity Ukraine has quickly established itself as a reliable partner for businesses of all sizes. During this time, we have implemented dozens of successful projects and helped many companies reach a new level of development.'
+    },
+    aboutValues: [
+      { title: { uk: 'Команда експертів', en: 'Team of Experts' }, description: { uk: 'Наша команда складається з досвідчених фахівців з багаторічним досвідом', en: 'Our team consists of experienced professionals with many years of experience' } },
+      { title: { uk: 'Висока якість', en: 'High Quality' }, description: { uk: 'Ми завжди прагнемо до найвищих стандартів якості в кожному проекті', en: 'We always strive for the highest quality standards in every project' } },
+      { title: { uk: 'Орієнтація на результат', en: 'Result-Oriented' }, description: { uk: 'Фокусуємось на досягненні конкретних бізнес-цілей наших клієнтів', en: 'We focus on achieving specific business goals of our clients' } },
+      { title: { uk: 'Постійний розвиток', en: 'Continuous Development' }, description: { uk: 'Завжди вивчаємо нові технології та вдосконалюємо наші навички', en: 'We always learn new technologies and improve our skills' } }
+    ]
   },
   contact: {
     title: { uk: 'Контакти', en: 'Contact' },
@@ -171,6 +192,11 @@ const PageEditor = () => {
       let contactPhone = defaultContent[slug]?.contactPhone || '';
       let contactAddress = defaultContent[slug]?.contactAddress || { uk: '', en: '' };
 
+      // Load about page content
+      let aboutMission = defaultContent[slug]?.aboutMission || { uk: '', en: '' };
+      let aboutHistory = defaultContent[slug]?.aboutHistory || { uk: '', en: '' };
+      let aboutValues = defaultContent[slug]?.aboutValues || [];
+
       if (slug === 'contact') {
         const { data: blocks } = await supabase
           .from('content_blocks')
@@ -196,6 +222,40 @@ const PageEditor = () => {
         }
       }
 
+      if (slug === 'about') {
+        const { data: blocks } = await supabase
+          .from('content_blocks')
+          .select('*, content_block_translations(*)')
+          .eq('page_id', page.id)
+          .eq('block_type', 'about_content')
+          .maybeSingle();
+
+        if (blocks) {
+          const blockTrans = blocks.content_block_translations as Array<{
+            language: string;
+            content: { mission?: string; history?: string; values?: Array<{ title: string; description: string }> };
+          }>;
+          const ukBlock = blockTrans?.find(t => t.language === 'uk');
+          const enBlock = blockTrans?.find(t => t.language === 'en');
+          
+          aboutMission = {
+            uk: ukBlock?.content?.mission || aboutMission.uk,
+            en: enBlock?.content?.mission || aboutMission.en
+          };
+          aboutHistory = {
+            uk: ukBlock?.content?.history || aboutHistory.uk,
+            en: enBlock?.content?.history || aboutHistory.en
+          };
+          
+          if (ukBlock?.content?.values && enBlock?.content?.values) {
+            aboutValues = ukBlock.content.values.map((ukVal, idx) => ({
+              title: { uk: ukVal.title, en: enBlock.content?.values?.[idx]?.title || '' },
+              description: { uk: ukVal.description, en: enBlock.content?.values?.[idx]?.description || '' }
+            }));
+          }
+        }
+      }
+
       setContent({
         title: {
           uk: ukTrans?.title || defaultContent[slug]?.title.uk || '',
@@ -210,7 +270,10 @@ const PageEditor = () => {
         sections: [],
         contactEmail,
         contactPhone,
-        contactAddress
+        contactAddress,
+        aboutMission,
+        aboutHistory,
+        aboutValues
       });
     } else {
       // Use default content
@@ -342,6 +405,66 @@ const PageEditor = () => {
         }
       }
 
+      // Save about page content
+      if (slug === 'about' && content.aboutMission !== undefined) {
+        let { data: aboutBlock } = await supabase
+          .from('content_blocks')
+          .select('id')
+          .eq('page_id', page.id)
+          .eq('block_type', 'about_content')
+          .maybeSingle();
+
+        if (!aboutBlock) {
+          const { data: newBlock, error: blockError } = await supabase
+            .from('content_blocks')
+            .insert({
+              page_id: page.id,
+              block_type: 'about_content',
+              sort_order: 0
+            })
+            .select('id')
+            .single();
+
+          if (blockError) throw blockError;
+          aboutBlock = newBlock;
+        }
+
+        if (aboutBlock) {
+          for (const lang of ['uk', 'en'] as const) {
+            const { data: existingBlockTrans } = await supabase
+              .from('content_block_translations')
+              .select('id')
+              .eq('block_id', aboutBlock.id)
+              .eq('language', lang)
+              .maybeSingle();
+
+            const aboutContent = {
+              mission: content.aboutMission?.[lang] || '',
+              history: content.aboutHistory?.[lang] || '',
+              values: content.aboutValues?.map(v => ({
+                title: v.title[lang],
+                description: v.description[lang]
+              })) || []
+            };
+
+            if (existingBlockTrans) {
+              await supabase
+                .from('content_block_translations')
+                .update({ content: aboutContent })
+                .eq('id', existingBlockTrans.id);
+            } else {
+              await supabase
+                .from('content_block_translations')
+                .insert({
+                  block_id: aboutBlock.id,
+                  language: lang,
+                  content: aboutContent
+                });
+            }
+          }
+        }
+      }
+
       toast({
         title: t({ uk: 'Збережено!', en: 'Saved!' }),
         description: t({ uk: 'Зміни успішно збережено', en: 'Changes saved successfully' })
@@ -385,6 +508,22 @@ const PageEditor = () => {
         ...(content.contactAddress || { uk: '', en: '' }),
         [lang]: value
       }
+    });
+  };
+
+  const updateAboutValue = (index: number, field: 'title' | 'description', lang: 'uk' | 'en', value: string) => {
+    if (!content || !content.aboutValues) return;
+    const newValues = [...content.aboutValues];
+    newValues[index] = {
+      ...newValues[index],
+      [field]: {
+        ...newValues[index][field],
+        [lang]: value
+      }
+    };
+    setContent({
+      ...content,
+      aboutValues: newValues
     });
   };
 
@@ -517,6 +656,128 @@ const PageEditor = () => {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {slug === 'about' && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Наша місія</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={content.aboutMission?.uk || ''}
+                      onChange={(e) => updateContent('aboutMission', 'uk', e.target.value)}
+                      placeholder="Опис місії компанії"
+                      rows={4}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Наша історія</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={content.aboutHistory?.uk || ''}
+                      onChange={(e) => updateContent('aboutHistory', 'uk', e.target.value)}
+                      placeholder="Історія компанії"
+                      rows={4}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Наші цінності</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {content.aboutValues?.map((value, index) => (
+                      <div key={index} className="p-4 border border-border rounded-lg space-y-4">
+                        <div>
+                          <Label>Назва цінності {index + 1}</Label>
+                          <Input
+                            value={value.title.uk}
+                            onChange={(e) => updateAboutValue(index, 'title', 'uk', e.target.value)}
+                            placeholder="Назва цінності"
+                          />
+                        </div>
+                        <div>
+                          <Label>Опис</Label>
+                          <Textarea
+                            value={value.description.uk}
+                            onChange={(e) => updateAboutValue(index, 'description', 'uk', e.target.value)}
+                            placeholder="Опис цінності"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {slug === 'about' && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Our Mission</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={content.aboutMission?.en || ''}
+                      onChange={(e) => updateContent('aboutMission', 'en', e.target.value)}
+                      placeholder="Company mission description"
+                      rows={4}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Our Story</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      value={content.aboutHistory?.en || ''}
+                      onChange={(e) => updateContent('aboutHistory', 'en', e.target.value)}
+                      placeholder="Company history"
+                      rows={4}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Our Values</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {content.aboutValues?.map((value, index) => (
+                      <div key={index} className="p-4 border border-border rounded-lg space-y-4">
+                        <div>
+                          <Label>Value {index + 1} Title</Label>
+                          <Input
+                            value={value.title.en}
+                            onChange={(e) => updateAboutValue(index, 'title', 'en', e.target.value)}
+                            placeholder="Value title"
+                          />
+                        </div>
+                        <div>
+                          <Label>Description</Label>
+                          <Textarea
+                            value={value.description.en}
+                            onChange={(e) => updateAboutValue(index, 'description', 'en', e.target.value)}
+                            placeholder="Value description"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </>
             )}
           </TabsContent>
 
