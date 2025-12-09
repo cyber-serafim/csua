@@ -27,6 +27,10 @@ interface PageContent {
   heroTitle: { uk: string; en: string };
   heroSubtitle: { uk: string; en: string };
   sections: ContentBlock[];
+  // Contact page specific fields
+  contactEmail?: string;
+  contactPhone?: string;
+  contactAddress?: { uk: string; en: string };
 }
 
 const defaultContent: Record<string, PageContent> = {
@@ -92,7 +96,10 @@ const defaultContent: Record<string, PageContent> = {
       uk: 'Маєте питання? Ми завжди раді допомогти!', 
       en: 'Have questions? We are always happy to help!' 
     },
-    sections: []
+    sections: [],
+    contactEmail: 'info@csua.biz.ua',
+    contactPhone: '+380 (95) 8-777-99-7',
+    contactAddress: { uk: 'Київ, Україна', en: 'Kyiv, Ukraine' }
   }
 };
 
@@ -159,6 +166,36 @@ const PageEditor = () => {
       const ukTrans = translations.find(t => t.language === 'uk');
       const enTrans = translations.find(t => t.language === 'en');
       
+      // Load contact info from content blocks if available
+      let contactEmail = defaultContent[slug]?.contactEmail || '';
+      let contactPhone = defaultContent[slug]?.contactPhone || '';
+      let contactAddress = defaultContent[slug]?.contactAddress || { uk: '', en: '' };
+
+      if (slug === 'contact') {
+        const { data: blocks } = await supabase
+          .from('content_blocks')
+          .select('*, content_block_translations(*)')
+          .eq('page_id', page.id)
+          .eq('block_type', 'contact_info')
+          .maybeSingle();
+
+        if (blocks) {
+          const blockTrans = blocks.content_block_translations as Array<{
+            language: string;
+            content: { email?: string; phone?: string; address?: string };
+          }>;
+          const ukBlock = blockTrans?.find(t => t.language === 'uk');
+          const enBlock = blockTrans?.find(t => t.language === 'en');
+          
+          contactEmail = ukBlock?.content?.email || contactEmail;
+          contactPhone = ukBlock?.content?.phone || contactPhone;
+          contactAddress = {
+            uk: ukBlock?.content?.address || contactAddress.uk,
+            en: enBlock?.content?.address || contactAddress.en
+          };
+        }
+      }
+
       setContent({
         title: {
           uk: ukTrans?.title || defaultContent[slug]?.title.uk || '',
@@ -170,7 +207,10 @@ const PageEditor = () => {
         },
         heroTitle: defaultContent[slug]?.heroTitle || { uk: '', en: '' },
         heroSubtitle: defaultContent[slug]?.heroSubtitle || { uk: '', en: '' },
-        sections: []
+        sections: [],
+        contactEmail,
+        contactPhone,
+        contactAddress
       });
     } else {
       // Use default content
@@ -179,7 +219,10 @@ const PageEditor = () => {
         metaDescription: { uk: '', en: '' },
         heroTitle: { uk: '', en: '' },
         heroSubtitle: { uk: '', en: '' },
-        sections: []
+        sections: [],
+        contactEmail: '',
+        contactPhone: '',
+        contactAddress: { uk: '', en: '' }
       });
     }
   };
@@ -240,6 +283,65 @@ const PageEditor = () => {
         }
       }
 
+      // Save contact info for contact page
+      if (slug === 'contact' && content.contactEmail !== undefined) {
+        // Check if contact_info block exists
+        let { data: contactBlock } = await supabase
+          .from('content_blocks')
+          .select('id')
+          .eq('page_id', page.id)
+          .eq('block_type', 'contact_info')
+          .maybeSingle();
+
+        if (!contactBlock) {
+          const { data: newBlock, error: blockError } = await supabase
+            .from('content_blocks')
+            .insert({
+              page_id: page.id,
+              block_type: 'contact_info',
+              sort_order: 0
+            })
+            .select('id')
+            .single();
+
+          if (blockError) throw blockError;
+          contactBlock = newBlock;
+        }
+
+        if (contactBlock) {
+          // Upsert translations for contact info
+          for (const lang of ['uk', 'en'] as const) {
+            const { data: existingBlockTrans } = await supabase
+              .from('content_block_translations')
+              .select('id')
+              .eq('block_id', contactBlock.id)
+              .eq('language', lang)
+              .maybeSingle();
+
+            const contactContent = {
+              email: content.contactEmail,
+              phone: content.contactPhone,
+              address: content.contactAddress?.[lang] || ''
+            };
+
+            if (existingBlockTrans) {
+              await supabase
+                .from('content_block_translations')
+                .update({ content: contactContent })
+                .eq('id', existingBlockTrans.id);
+            } else {
+              await supabase
+                .from('content_block_translations')
+                .insert({
+                  block_id: contactBlock.id,
+                  language: lang,
+                  content: contactContent
+                });
+            }
+          }
+        }
+      }
+
       toast({
         title: t({ uk: 'Збережено!', en: 'Saved!' }),
         description: t({ uk: 'Зміни успішно збережено', en: 'Changes saved successfully' })
@@ -262,6 +364,25 @@ const PageEditor = () => {
       ...content,
       [field]: {
         ...(content[field] as { uk: string; en: string }),
+        [lang]: value
+      }
+    });
+  };
+
+  const updateContactField = (field: 'contactEmail' | 'contactPhone', value: string) => {
+    if (!content) return;
+    setContent({
+      ...content,
+      [field]: value
+    });
+  };
+
+  const updateContactAddress = (lang: 'uk' | 'en', value: string) => {
+    if (!content) return;
+    setContent({
+      ...content,
+      contactAddress: {
+        ...(content.contactAddress || { uk: '', en: '' }),
         [lang]: value
       }
     });
@@ -361,6 +482,42 @@ const PageEditor = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {slug === 'contact' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Контактна інформація</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      value={content.contactEmail || ''}
+                      onChange={(e) => updateContactField('contactEmail', e.target.value)}
+                      placeholder="info@csua.biz.ua"
+                      type="email"
+                    />
+                  </div>
+                  <div>
+                    <Label>Телефон</Label>
+                    <Input
+                      value={content.contactPhone || ''}
+                      onChange={(e) => updateContactField('contactPhone', e.target.value)}
+                      placeholder="+380 (95) 8-777-99-7"
+                      type="tel"
+                    />
+                  </div>
+                  <div>
+                    <Label>Адреса (Українською)</Label>
+                    <Input
+                      value={content.contactAddress?.uk || ''}
+                      onChange={(e) => updateContactAddress('uk', e.target.value)}
+                      placeholder="Київ, Україна"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="en" className="space-y-6">
@@ -413,6 +570,50 @@ const PageEditor = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {slug === 'contact' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      value={content.contactEmail || ''}
+                      onChange={(e) => updateContactField('contactEmail', e.target.value)}
+                      placeholder="info@csua.biz.ua"
+                      type="email"
+                      disabled
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Edit in Ukrainian tab
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input
+                      value={content.contactPhone || ''}
+                      onChange={(e) => updateContactField('contactPhone', e.target.value)}
+                      placeholder="+380 (95) 8-777-99-7"
+                      type="tel"
+                      disabled
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Edit in Ukrainian tab
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Address (English)</Label>
+                    <Input
+                      value={content.contactAddress?.en || ''}
+                      onChange={(e) => updateContactAddress('en', e.target.value)}
+                      placeholder="Kyiv, Ukraine"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </main>
