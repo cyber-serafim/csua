@@ -7,11 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Mail, Phone, MapPin } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ContactInfo {
+  email: string;
+  phone: string;
+  address: { uk: string; en: string };
+}
 
 const Contact = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
@@ -19,6 +26,50 @@ const Contact = () => {
     phone: '',
     message: ''
   });
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    email: 'info@csua.biz.ua',
+    phone: '+380 (95) 8-777-99-7',
+    address: { uk: 'Київ, Україна', en: 'Kyiv, Ukraine' }
+  });
+
+  useEffect(() => {
+    loadContactInfo();
+  }, []);
+
+  const loadContactInfo = async () => {
+    const { data: page } = await supabase
+      .from('pages')
+      .select('id')
+      .eq('slug', 'contact')
+      .maybeSingle();
+
+    if (!page) return;
+
+    const { data: blocks } = await supabase
+      .from('content_blocks')
+      .select('*, content_block_translations(*)')
+      .eq('page_id', page.id)
+      .eq('block_type', 'contact_info')
+      .maybeSingle();
+
+    if (blocks) {
+      const blockTrans = blocks.content_block_translations as Array<{
+        language: string;
+        content: { email?: string; phone?: string; address?: string };
+      }>;
+      const ukBlock = blockTrans?.find(t => t.language === 'uk');
+      const enBlock = blockTrans?.find(t => t.language === 'en');
+
+      setContactInfo({
+        email: ukBlock?.content?.email || 'info@csua.biz.ua',
+        phone: ukBlock?.content?.phone || '+380 (95) 8-777-99-7',
+        address: {
+          uk: ukBlock?.content?.address || 'Київ, Україна',
+          en: enBlock?.content?.address || 'Kyiv, Ukraine'
+        }
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,21 +83,21 @@ const Contact = () => {
     setFormData({ name: '', email: '', phone: '', message: '' });
   };
 
-  const contactInfo = [
+  const contactItems = [
     {
       icon: Mail,
       title: { uk: 'Email', en: 'Email' },
-      value: 'info@csua.biz.ua'
+      value: contactInfo.email
     },
     {
       icon: Phone,
       title: { uk: 'Телефон', en: 'Phone' },
-      value: '+380 (95) 8-777-99-7'
+      value: contactInfo.phone
     },
     {
       icon: MapPin,
       title: { uk: 'Адреса', en: 'Address' },
-      value: { uk: 'Київ, Україна', en: 'Kyiv, Ukraine' }
+      value: contactInfo.address[language]
     }
   ];
 
@@ -69,7 +120,7 @@ const Contact = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {contactInfo.map((info, index) => (
+            {contactItems.map((info, index) => (
               <Card 
                 key={index} 
                 className="text-center hover:shadow-large transition-all duration-300 animate-fade-in"
@@ -83,7 +134,7 @@ const Contact = () => {
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-base">
-                    {typeof info.value === 'string' ? info.value : t(info.value)}
+                    {info.value}
                   </CardDescription>
                 </CardContent>
               </Card>
