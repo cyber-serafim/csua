@@ -38,6 +38,14 @@ interface PageContent {
     title: { uk: string; en: string };
     description: { uk: string; en: string };
   }>;
+  // Home page services section
+  servicesSectionTitle?: { uk: string; en: string };
+  servicesSectionSubtitle?: { uk: string; en: string };
+  homeServices?: Array<{
+    icon: string;
+    title: { uk: string; en: string };
+    description: { uk: string; en: string };
+  }>;
 }
 
 const defaultContent: Record<string, PageContent> = {
@@ -55,7 +63,18 @@ const defaultContent: Record<string, PageContent> = {
       uk: 'Ми допомагаємо компаніям досягати успіху через інноваційні технології', 
       en: 'We help companies succeed through innovative technologies' 
     },
-    sections: []
+    sections: [],
+    servicesSectionTitle: { uk: 'Наші послуги', en: 'Our Services' },
+    servicesSectionSubtitle: { 
+      uk: 'Ми пропонуємо широкий спектр IT-послуг для бізнесу будь-якого масштабу', 
+      en: 'We offer a wide range of IT services for businesses of any scale' 
+    },
+    homeServices: [
+      { icon: 'Code', title: { uk: 'Веб-розробка', en: 'Web Development' }, description: { uk: 'Створення сучасних веб-додатків та сайтів', en: 'Building modern web applications and websites' } },
+      { icon: 'Server', title: { uk: 'Серверні рішення', en: 'Server Solutions' }, description: { uk: 'Налаштування та підтримка серверної інфраструктури', en: 'Setup and maintenance of server infrastructure' } },
+      { icon: 'Shield', title: { uk: 'Кібербезпека', en: 'Cybersecurity' }, description: { uk: 'Захист ваших даних та систем', en: 'Protection of your data and systems' } },
+      { icon: 'Zap', title: { uk: 'Оптимізація', en: 'Optimization' }, description: { uk: 'Підвищення продуктивності IT-інфраструктури', en: 'Improving IT infrastructure performance' } }
+    ]
   },
   services: {
     title: { uk: 'Послуги', en: 'Services' },
@@ -256,6 +275,50 @@ const PageEditor = () => {
         }
       }
 
+      // Load home page services section
+      let servicesSectionTitle = defaultContent[slug]?.servicesSectionTitle || { uk: '', en: '' };
+      let servicesSectionSubtitle = defaultContent[slug]?.servicesSectionSubtitle || { uk: '', en: '' };
+      let homeServices = defaultContent[slug]?.homeServices || [];
+
+      if (slug === 'home') {
+        const { data: blocks } = await supabase
+          .from('content_blocks')
+          .select('*, content_block_translations(*)')
+          .eq('page_id', page.id)
+          .eq('block_type', 'home_services')
+          .maybeSingle();
+
+        if (blocks) {
+          const blockTrans = blocks.content_block_translations as Array<{
+            language: string;
+            content: { 
+              sectionTitle?: string; 
+              sectionSubtitle?: string; 
+              services?: Array<{ icon: string; title: string; description: string }> 
+            };
+          }>;
+          const ukBlock = blockTrans?.find(t => t.language === 'uk');
+          const enBlock = blockTrans?.find(t => t.language === 'en');
+          
+          servicesSectionTitle = {
+            uk: ukBlock?.content?.sectionTitle || servicesSectionTitle.uk,
+            en: enBlock?.content?.sectionTitle || servicesSectionTitle.en
+          };
+          servicesSectionSubtitle = {
+            uk: ukBlock?.content?.sectionSubtitle || servicesSectionSubtitle.uk,
+            en: enBlock?.content?.sectionSubtitle || servicesSectionSubtitle.en
+          };
+          
+          if (ukBlock?.content?.services && enBlock?.content?.services) {
+            homeServices = ukBlock.content.services.map((ukSvc, idx) => ({
+              icon: ukSvc.icon,
+              title: { uk: ukSvc.title, en: enBlock.content?.services?.[idx]?.title || '' },
+              description: { uk: ukSvc.description, en: enBlock.content?.services?.[idx]?.description || '' }
+            }));
+          }
+        }
+      }
+
       setContent({
         title: {
           uk: ukTrans?.title || defaultContent[slug]?.title.uk || '',
@@ -273,7 +336,10 @@ const PageEditor = () => {
         contactAddress,
         aboutMission,
         aboutHistory,
-        aboutValues
+        aboutValues,
+        servicesSectionTitle,
+        servicesSectionSubtitle,
+        homeServices
       });
     } else {
       // Use default content
@@ -465,6 +531,67 @@ const PageEditor = () => {
         }
       }
 
+      // Save home page services section
+      if (slug === 'home' && content.homeServices !== undefined) {
+        let { data: servicesBlock } = await supabase
+          .from('content_blocks')
+          .select('id')
+          .eq('page_id', page.id)
+          .eq('block_type', 'home_services')
+          .maybeSingle();
+
+        if (!servicesBlock) {
+          const { data: newBlock, error: blockError } = await supabase
+            .from('content_blocks')
+            .insert({
+              page_id: page.id,
+              block_type: 'home_services',
+              sort_order: 0
+            })
+            .select('id')
+            .single();
+
+          if (blockError) throw blockError;
+          servicesBlock = newBlock;
+        }
+
+        if (servicesBlock) {
+          for (const lang of ['uk', 'en'] as const) {
+            const { data: existingBlockTrans } = await supabase
+              .from('content_block_translations')
+              .select('id')
+              .eq('block_id', servicesBlock.id)
+              .eq('language', lang)
+              .maybeSingle();
+
+            const servicesContent = {
+              sectionTitle: content.servicesSectionTitle?.[lang] || '',
+              sectionSubtitle: content.servicesSectionSubtitle?.[lang] || '',
+              services: content.homeServices?.map(s => ({
+                icon: s.icon,
+                title: s.title[lang],
+                description: s.description[lang]
+              })) || []
+            };
+
+            if (existingBlockTrans) {
+              await supabase
+                .from('content_block_translations')
+                .update({ content: servicesContent })
+                .eq('id', existingBlockTrans.id);
+            } else {
+              await supabase
+                .from('content_block_translations')
+                .insert({
+                  block_id: servicesBlock.id,
+                  language: lang,
+                  content: servicesContent
+                });
+            }
+          }
+        }
+      }
+
       toast({
         title: t({ uk: 'Збережено!', en: 'Saved!' }),
         description: t({ uk: 'Зміни успішно збережено', en: 'Changes saved successfully' })
@@ -524,6 +651,26 @@ const PageEditor = () => {
     setContent({
       ...content,
       aboutValues: newValues
+    });
+  };
+
+  const updateHomeService = (index: number, field: 'icon' | 'title' | 'description', lang: 'uk' | 'en' | null, value: string) => {
+    if (!content || !content.homeServices) return;
+    const newServices = [...content.homeServices];
+    if (field === 'icon') {
+      newServices[index] = { ...newServices[index], icon: value };
+    } else {
+      newServices[index] = {
+        ...newServices[index],
+        [field]: {
+          ...newServices[index][field],
+          [lang!]: value
+        }
+      };
+    }
+    setContent({
+      ...content,
+      homeServices: newServices
     });
   };
 
@@ -621,6 +768,65 @@ const PageEditor = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {slug === 'home' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Блок "Наші послуги"</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label>Заголовок секції</Label>
+                    <Input
+                      value={content.servicesSectionTitle?.uk || ''}
+                      onChange={(e) => updateContent('servicesSectionTitle', 'uk', e.target.value)}
+                      placeholder="Наші послуги"
+                    />
+                  </div>
+                  <div>
+                    <Label>Підзаголовок секції</Label>
+                    <Textarea
+                      value={content.servicesSectionSubtitle?.uk || ''}
+                      onChange={(e) => updateContent('servicesSectionSubtitle', 'uk', e.target.value)}
+                      placeholder="Опис секції послуг"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-lg font-semibold">Послуги</Label>
+                    {content.homeServices?.map((service, index) => (
+                      <div key={index} className="p-4 border border-border rounded-lg space-y-4">
+                        <div>
+                          <Label>Іконка (назва Lucide)</Label>
+                          <Input
+                            value={service.icon}
+                            onChange={(e) => updateHomeService(index, 'icon', null, e.target.value)}
+                            placeholder="Code, Server, Shield, Zap..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Назва послуги {index + 1}</Label>
+                          <Input
+                            value={service.title.uk}
+                            onChange={(e) => updateHomeService(index, 'title', 'uk', e.target.value)}
+                            placeholder="Назва послуги"
+                          />
+                        </div>
+                        <div>
+                          <Label>Опис</Label>
+                          <Textarea
+                            value={service.description.uk}
+                            onChange={(e) => updateHomeService(index, 'description', 'uk', e.target.value)}
+                            placeholder="Опис послуги"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {slug === 'contact' && (
               <Card>
@@ -831,6 +1037,67 @@ const PageEditor = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {slug === 'home' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>"Our Services" Section</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label>Section Title</Label>
+                    <Input
+                      value={content.servicesSectionTitle?.en || ''}
+                      onChange={(e) => updateContent('servicesSectionTitle', 'en', e.target.value)}
+                      placeholder="Our Services"
+                    />
+                  </div>
+                  <div>
+                    <Label>Section Subtitle</Label>
+                    <Textarea
+                      value={content.servicesSectionSubtitle?.en || ''}
+                      onChange={(e) => updateContent('servicesSectionSubtitle', 'en', e.target.value)}
+                      placeholder="Services section description"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-lg font-semibold">Services</Label>
+                    {content.homeServices?.map((service, index) => (
+                      <div key={index} className="p-4 border border-border rounded-lg space-y-4">
+                        <div>
+                          <Label>Icon (Lucide name)</Label>
+                          <Input
+                            value={service.icon}
+                            disabled
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Edit in Ukrainian tab
+                          </p>
+                        </div>
+                        <div>
+                          <Label>Service {index + 1} Title</Label>
+                          <Input
+                            value={service.title.en}
+                            onChange={(e) => updateHomeService(index, 'title', 'en', e.target.value)}
+                            placeholder="Service title"
+                          />
+                        </div>
+                        <div>
+                          <Label>Description</Label>
+                          <Textarea
+                            value={service.description.en}
+                            onChange={(e) => updateHomeService(index, 'description', 'en', e.target.value)}
+                            placeholder="Service description"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {slug === 'contact' && (
               <Card>
