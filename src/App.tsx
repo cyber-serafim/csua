@@ -17,6 +17,7 @@ import AuthCallback from "./pages/admin/AuthCallback";
 import PagesList from "./pages/admin/PagesList";
 import PageEditor from "./pages/admin/PageEditor";
 import ServicesEditor from "./pages/admin/ServicesEditor";
+import ServicePageEditor from "./pages/admin/ServicePageEditor";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/admin/pages" element={<PagesList />} />
               <Route path="/admin/pages/:slug" element={<PageEditor />} />
               <Route path="/admin/services" element={<ServicesEditor />} />
+              <Route path="/admin/services/:id" element={<ServicePageEditor />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

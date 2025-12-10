@@ -7,12 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Edit, Eye, Globe, Home, Info, Phone, Briefcase } from 'lucide-react';
+import * as Icons from 'lucide-react';
 
 interface PageData {
   slug: string;
   title: { uk: string; en: string };
   icon: React.ElementType;
   description: { uk: string; en: string };
+}
+
+interface ServiceItem {
+  id: string;
+  icon_name: string;
+  title: { uk: string; en: string };
 }
 
 const staticPages: PageData[] = [
@@ -47,10 +54,58 @@ const PagesList = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [services, setServices] = useState<ServiceItem[]>([]);
 
   useEffect(() => {
     checkAdmin();
   }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadServices();
+    }
+  }, [isAdmin]);
+
+  const loadServices = async () => {
+    const { data, error } = await supabase
+      .from('services')
+      .select(`
+        id,
+        icon_name,
+        service_translations (
+          language,
+          title
+        )
+      `)
+      .eq('is_active', true)
+      .order('sort_order');
+
+    if (error) {
+      console.error('Error loading services:', error);
+      return;
+    }
+
+    const formattedServices: ServiceItem[] = (data || []).map((service: any) => {
+      const ukTrans = service.service_translations?.find((t: any) => t.language === 'uk');
+      const enTrans = service.service_translations?.find((t: any) => t.language === 'en');
+      
+      return {
+        id: service.id,
+        icon_name: service.icon_name,
+        title: {
+          uk: ukTrans?.title || '',
+          en: enTrans?.title || ''
+        }
+      };
+    });
+
+    setServices(formattedServices);
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const IconComponent = (Icons as any)[iconName];
+    return IconComponent || Icons.Briefcase;
+  };
 
   const checkAdmin = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -125,7 +180,7 @@ const PagesList = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-              <Button 
+                  <Button 
                     className="flex-1"
                     onClick={() => {
                       if (page.slug === 'services') {
@@ -148,6 +203,49 @@ const PagesList = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Services Pages Section */}
+        <div className="mt-12">
+          <h2 className="text-xl font-bold mb-6 bg-gradient-primary bg-clip-text text-transparent">
+            {t({ uk: 'Редагувати сторінки послуг', en: 'Edit Service Pages' })}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {services.map((service) => {
+              const IconComponent = getIconComponent(service.icon_name);
+              return (
+                <Card key={service.id} className="hover:shadow-large transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
+                        <IconComponent className="h-5 w-5 text-primary-foreground" />
+                      </div>
+                      <CardTitle className="text-lg">{t(service.title)}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1"
+                        size="sm"
+                        onClick={() => navigate(`/admin/services/${service.id}`)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        {t({ uk: 'Редагувати', en: 'Edit' })}
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/services/${service.id}`, '_blank')}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>
