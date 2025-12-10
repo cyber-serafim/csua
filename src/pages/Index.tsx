@@ -1,36 +1,100 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Code, Server, Shield, Zap } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+
+interface HomeService {
+  icon: string;
+  title: { uk: string; en: string };
+  description: { uk: string; en: string };
+}
+
+interface ServicesSection {
+  title: { uk: string; en: string };
+  subtitle: { uk: string; en: string };
+  services: HomeService[];
+}
+
+const defaultServices: ServicesSection = {
+  title: { uk: 'Наші послуги', en: 'Our Services' },
+  subtitle: { 
+    uk: 'Ми пропонуємо широкий спектр IT-послуг для бізнесу будь-якого масштабу', 
+    en: 'We offer a wide range of IT services for businesses of any scale' 
+  },
+  services: [
+    { icon: 'Code', title: { uk: 'Веб-розробка', en: 'Web Development' }, description: { uk: 'Створення сучасних веб-додатків та сайтів', en: 'Building modern web applications and websites' } },
+    { icon: 'Server', title: { uk: 'Серверні рішення', en: 'Server Solutions' }, description: { uk: 'Налаштування та підтримка серверної інфраструктури', en: 'Setup and maintenance of server infrastructure' } },
+    { icon: 'Shield', title: { uk: 'Кібербезпека', en: 'Cybersecurity' }, description: { uk: 'Захист ваших даних та систем', en: 'Protection of your data and systems' } },
+    { icon: 'Zap', title: { uk: 'Оптимізація', en: 'Optimization' }, description: { uk: 'Підвищення продуктивності IT-інфраструктури', en: 'Improving IT infrastructure performance' } }
+  ]
+};
 
 const Index = () => {
   const { t } = useLanguage();
+  const [servicesSection, setServicesSection] = useState<ServicesSection>(defaultServices);
 
-  const services = [
-    {
-      icon: Code,
-      title: { uk: 'Веб-розробка', en: 'Web Development' },
-      description: { uk: 'Створення сучасних веб-додатків та сайтів', en: 'Building modern web applications and websites' }
-    },
-    {
-      icon: Server,
-      title: { uk: 'Серверні рішення', en: 'Server Solutions' },
-      description: { uk: 'Налаштування та підтримка серверної інфраструктури', en: 'Setup and maintenance of server infrastructure' }
-    },
-    {
-      icon: Shield,
-      title: { uk: 'Кібербезпека', en: 'Cybersecurity' },
-      description: { uk: 'Захист ваших даних та систем', en: 'Protection of your data and systems' }
-    },
-    {
-      icon: Zap,
-      title: { uk: 'Оптимізація', en: 'Optimization' },
-      description: { uk: 'Підвищення продуктивності IT-інфраструктури', en: 'Improving IT infrastructure performance' }
+  useEffect(() => {
+    loadServicesSection();
+  }, []);
+
+  const loadServicesSection = async () => {
+    const { data: page } = await supabase
+      .from('pages')
+      .select('id')
+      .eq('slug', 'home')
+      .maybeSingle();
+
+    if (!page) return;
+
+    const { data: block } = await supabase
+      .from('content_blocks')
+      .select('*, content_block_translations(*)')
+      .eq('page_id', page.id)
+      .eq('block_type', 'home_services')
+      .maybeSingle();
+
+    if (block) {
+      const blockTrans = block.content_block_translations as Array<{
+        language: string;
+        content: { 
+          sectionTitle?: string; 
+          sectionSubtitle?: string; 
+          services?: Array<{ icon: string; title: string; description: string }> 
+        };
+      }>;
+      const ukBlock = blockTrans?.find(t => t.language === 'uk');
+      const enBlock = blockTrans?.find(t => t.language === 'en');
+      
+      if (ukBlock?.content?.services && enBlock?.content?.services) {
+        setServicesSection({
+          title: {
+            uk: ukBlock?.content?.sectionTitle || defaultServices.title.uk,
+            en: enBlock?.content?.sectionTitle || defaultServices.title.en
+          },
+          subtitle: {
+            uk: ukBlock?.content?.sectionSubtitle || defaultServices.subtitle.uk,
+            en: enBlock?.content?.sectionSubtitle || defaultServices.subtitle.en
+          },
+          services: ukBlock.content.services.map((ukSvc, idx) => ({
+            icon: ukSvc.icon,
+            title: { uk: ukSvc.title, en: enBlock.content?.services?.[idx]?.title || '' },
+            description: { uk: ukSvc.description, en: enBlock.content?.services?.[idx]?.description || '' }
+          }))
+        });
+      }
     }
-  ];
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName];
+    return IconComponent || Icons.Briefcase;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -74,29 +138,29 @@ const Index = () => {
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {t({ uk: 'Наші послуги', en: 'Our Services' })}
+            {t(servicesSection.title)}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            {t({
-              uk: 'Ми пропонуємо широкий спектр IT-послуг для бізнесу будь-якого масштабу',
-              en: 'We offer a wide range of IT services for businesses of any scale'
-            })}
+            {t(servicesSection.subtitle)}
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {services.map((service, index) => (
-            <Card key={index} className="hover:shadow-large transition-all duration-300 hover:-translate-y-1">
-              <CardHeader>
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
-                  <service.icon className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <CardTitle>{t(service.title)}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>{t(service.description)}</CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+          {servicesSection.services.map((service, index) => {
+            const IconComponent = getIconComponent(service.icon);
+            return (
+              <Card key={index} className="hover:shadow-large transition-all duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
+                    <IconComponent className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                  <CardTitle>{t(service.title)}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{t(service.description)}</CardDescription>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 
