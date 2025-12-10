@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Navigation } from '@/components/Navigation';
 import { Footer } from '@/components/Footer';
@@ -14,6 +15,7 @@ interface ServiceData {
 }
 
 const Services = () => {
+  const navigate = useNavigate();
   const { t, language } = useLanguage();
   const [services, setServices] = useState<ServiceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,8 +100,9 @@ const Services = () => {
               return (
                 <Card 
                   key={service.id} 
-                  className="hover:shadow-large transition-all duration-300 hover:-translate-y-1 animate-fade-in"
+                  className="hover:shadow-large transition-all duration-300 hover:-translate-y-1 animate-fade-in cursor-pointer"
                   style={{ animationDelay: `${index * 50}ms` }}
+                  onClick={() => navigate(`/services/${service.id}`)}
                 >
                   <CardHeader>
                     <div className="w-14 h-14 bg-gradient-primary rounded-xl flex items-center justify-center mb-4 shadow-medium">
