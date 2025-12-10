@@ -17,6 +17,7 @@ import PagesList from "./pages/admin/PagesList";
 import PageEditor from "./pages/admin/PageEditor";
 import ServicesEditor from "./pages/admin/ServicesEditor";
 import NotFound from "./pages/NotFound";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/services" element={<Services />} />
