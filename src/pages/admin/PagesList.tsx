@@ -8,6 +8,22 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Edit, Eye, Globe, Home, Info, Phone, Briefcase } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy
+} from '@dnd-kit/sortable';
+import SortableServiceCard from '@/components/admin/SortableServiceCard';
 
 interface PageData {
   slug: string;
@@ -55,6 +71,50 @@ const PagesList = () => {
   const { t } = useLanguage();
   const [isAdmin, setIsAdmin] = useState(false);
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = services.findIndex(s => s.id === active.id);
+    const newIndex = services.findIndex(s => s.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newServices = arrayMove(services, oldIndex, newIndex);
+      setServices(newServices);
+      
+      // Save new order to database
+      setIsSaving(true);
+      try {
+        for (let i = 0; i < newServices.length; i++) {
+          await supabase
+            .from('services')
+            .update({ sort_order: i + 1 })
+            .eq('id', newServices[i].id);
+        }
+      } catch (error) {
+        console.error('Error saving order:', error);
+        toast({
+          title: t({ uk: 'Помилка', en: 'Error' }),
+          description: t({ uk: 'Не вдалося зберегти порядок', en: 'Failed to save order' }),
+          variant: 'destructive'
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
 
   useEffect(() => {
     checkAdmin();
@@ -207,45 +267,32 @@ const PagesList = () => {
 
         {/* Services Pages Section */}
         <div className="mt-12">
-          <h2 className="text-xl font-bold mb-6 bg-gradient-primary bg-clip-text text-transparent">
-            {t({ uk: 'Редагувати сторінки послуг', en: 'Edit Service Pages' })}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {services.map((service) => {
-              const IconComponent = getIconComponent(service.icon_name);
-              return (
-                <Card key={service.id} className="hover:shadow-large transition-all duration-300">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-                        <IconComponent className="h-5 w-5 text-primary-foreground" />
-                      </div>
-                      <CardTitle className="text-lg">{t(service.title)}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
-                      <Button 
-                        className="flex-1"
-                        size="sm"
-                        onClick={() => navigate(`/admin/services/${service.id}`)}
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        {t({ uk: 'Редагувати', en: 'Edit' })}
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/services/${service.id}`, '_blank')}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              {t({ uk: 'Редагувати сторінки послуг', en: 'Edit Service Pages' })}
+            </h2>
+            {isSaving && (
+              <span className="text-sm text-muted-foreground">
+                {t({ uk: 'Збереження...', en: 'Saving...' })}
+              </span>
+            )}
           </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={services.map(s => s.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {services.map((service) => (
+                  <SortableServiceCard key={service.id} service={service} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </main>
     </div>
