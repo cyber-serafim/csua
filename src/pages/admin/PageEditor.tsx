@@ -10,6 +10,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import * as Icons from 'lucide-react';
+
+const availableIcons = [
+  'Code', 'Server', 'Shield', 'Zap', 'Cloud', 'Database', 'Lock', 
+  'Smartphone', 'FileSearch', 'Camera', 'DoorOpen', 'Bell', 'Monitor',
+  'Cpu', 'HardDrive', 'Wifi', 'Globe', 'Mail', 'MessageSquare', 'Users',
+  'Settings', 'Tool', 'Wrench', 'Key', 'Eye', 'ShieldCheck', 'AlertTriangle',
+  'Briefcase', 'Scan', 'Network', 'Fingerprint', 'UserCheck', 'ShieldAlert'
+];
+
+const getIconComponent = (iconName: string) => {
+  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName];
+  return IconComponent || Icons.Briefcase;
+};
 
 interface ContentBlock {
   id: string;
@@ -796,13 +811,37 @@ const PageEditor = () => {
                     <Label className="text-lg font-semibold">Послуги</Label>
                     {content.homeServices?.map((service, index) => (
                       <div key={index} className="p-4 border border-border rounded-lg space-y-4">
-                        <div>
-                          <Label>Іконка (назва Lucide)</Label>
-                          <Input
-                            value={service.icon}
-                            onChange={(e) => updateHomeService(index, 'icon', null, e.target.value)}
-                            placeholder="Code, Server, Shield, Zap..."
-                          />
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
+                            {(() => {
+                              const IconPreview = getIconComponent(service.icon);
+                              return <IconPreview className="h-6 w-6" />;
+                            })()}
+                          </div>
+                          <div className="flex-1">
+                            <Label>Іконка</Label>
+                            <Select
+                              value={service.icon}
+                              onValueChange={(value) => updateHomeService(index, 'icon', null, value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableIcons.map((iconName) => {
+                                  const IconItem = getIconComponent(iconName);
+                                  return (
+                                    <SelectItem key={iconName} value={iconName}>
+                                      <div className="flex items-center gap-2">
+                                        <IconItem className="h-4 w-4" />
+                                        <span>{iconName}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <div>
                           <Label>Назва послуги {index + 1}</Label>
@@ -1065,15 +1104,37 @@ const PageEditor = () => {
                     <Label className="text-lg font-semibold">Services</Label>
                     {content.homeServices?.map((service, index) => (
                       <div key={index} className="p-4 border border-border rounded-lg space-y-4">
-                        <div>
-                          <Label>Icon (Lucide name)</Label>
-                          <Input
-                            value={service.icon}
-                            disabled
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Edit in Ukrainian tab
-                          </p>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
+                            {(() => {
+                              const IconPreview = getIconComponent(service.icon);
+                              return <IconPreview className="h-6 w-6" />;
+                            })()}
+                          </div>
+                          <div className="flex-1">
+                            <Label>Icon</Label>
+                            <Select
+                              value={service.icon}
+                              onValueChange={(value) => updateHomeService(index, 'icon', null, value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableIcons.map((iconName) => {
+                                  const IconItem = getIconComponent(iconName);
+                                  return (
+                                    <SelectItem key={iconName} value={iconName}>
+                                      <div className="flex items-center gap-2">
+                                        <IconItem className="h-4 w-4" />
+                                        <span>{iconName}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <div>
                           <Label>Service {index + 1} Title</Label>

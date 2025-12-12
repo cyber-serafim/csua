@@ -234,29 +234,34 @@ const ServicePageEditor = () => {
             <CardTitle>{t({ uk: 'Налаштування послуги', en: 'Service Settings' })}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>{t({ uk: 'Іконка', en: 'Icon' })}</Label>
-              <Select
-                value={service.icon_name}
-                onValueChange={(value) => updateService('icon_name', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableIcons.map((iconName) => {
-                    const Icon = getIconComponent(iconName);
-                    return (
-                      <SelectItem key={iconName} value={iconName}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          <span>{iconName}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center text-primary-foreground shrink-0 shadow-elegant">
+                <IconComponent className="h-8 w-8" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label>{t({ uk: 'Іконка', en: 'Icon' })}</Label>
+                <Select
+                  value={service.icon_name}
+                  onValueChange={(value) => updateService('icon_name', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableIcons.map((iconName) => {
+                      const Icon = getIconComponent(iconName);
+                      return (
+                        <SelectItem key={iconName} value={iconName}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            <span>{iconName}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
