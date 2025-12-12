@@ -12,6 +12,22 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowLeft, Save, Plus, Trash2, GripVertical } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as Icons from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import SortableServiceItem from '@/components/admin/SortableServiceItem';
 
 const availableIcons = [
   'Code', 'Server', 'Shield', 'Zap', 'Cloud', 'Database', 'Lock', 
@@ -167,6 +183,31 @@ const PageEditor = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [content, setContent] = useState<PageContent | null>(null);
   const [activeTab, setActiveTab] = useState('uk');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!content || !content.homeServices || !over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = content.homeServices.findIndex((_, i) => `service-${i}` === active.id);
+    const newIndex = content.homeServices.findIndex((_, i) => `service-${i}` === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      setContent({
+        ...content,
+        homeServices: arrayMove(content.homeServices, oldIndex, newIndex)
+      });
+    }
+  };
 
   useEffect(() => {
     checkAdmin();
@@ -837,67 +878,28 @@ const PageEditor = () => {
                         Додати послугу
                       </Button>
                     </div>
-                    {content.homeServices?.map((service, index) => (
-                      <div key={index} className="p-4 border border-border rounded-lg space-y-4 relative">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeHomeService(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <div className="flex items-center gap-4 pr-10">
-                          <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
-                            {(() => {
-                              const IconPreview = getIconComponent(service.icon);
-                              return <IconPreview className="h-6 w-6" />;
-                            })()}
-                          </div>
-                          <div className="flex-1">
-                            <Label>Іконка</Label>
-                            <Select
-                              value={service.icon}
-                              onValueChange={(value) => updateHomeService(index, 'icon', null, value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableIcons.map((iconName) => {
-                                  const IconItem = getIconComponent(iconName);
-                                  return (
-                                    <SelectItem key={iconName} value={iconName}>
-                                      <div className="flex items-center gap-2">
-                                        <IconItem className="h-4 w-4" />
-                                        <span>{iconName}</span>
-                                      </div>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <Label>Назва послуги {index + 1}</Label>
-                          <Input
-                            value={service.title.uk}
-                            onChange={(e) => updateHomeService(index, 'title', 'uk', e.target.value)}
-                            placeholder="Назва послуги"
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={content.homeServices?.map((_, i) => `service-${i}`) || []}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {content.homeServices?.map((service, index) => (
+                          <SortableServiceItem
+                            key={`service-${index}`}
+                            id={`service-${index}`}
+                            index={index}
+                            service={service}
+                            lang="uk"
+                            onUpdate={updateHomeService}
+                            onRemove={removeHomeService}
                           />
-                        </div>
-                        <div>
-                          <Label>Опис</Label>
-                          <Textarea
-                            value={service.description.uk}
-                            onChange={(e) => updateHomeService(index, 'description', 'uk', e.target.value)}
-                            placeholder="Опис послуги"
-                            rows={2}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 </CardContent>
               </Card>
@@ -1144,67 +1146,28 @@ const PageEditor = () => {
                         Add Service
                       </Button>
                     </div>
-                    {content.homeServices?.map((service, index) => (
-                      <div key={index} className="p-4 border border-border rounded-lg space-y-4 relative">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeHomeService(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <div className="flex items-center gap-4 pr-10">
-                          <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
-                            {(() => {
-                              const IconPreview = getIconComponent(service.icon);
-                              return <IconPreview className="h-6 w-6" />;
-                            })()}
-                          </div>
-                          <div className="flex-1">
-                            <Label>Icon</Label>
-                            <Select
-                              value={service.icon}
-                              onValueChange={(value) => updateHomeService(index, 'icon', null, value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableIcons.map((iconName) => {
-                                  const IconItem = getIconComponent(iconName);
-                                  return (
-                                    <SelectItem key={iconName} value={iconName}>
-                                      <div className="flex items-center gap-2">
-                                        <IconItem className="h-4 w-4" />
-                                        <span>{iconName}</span>
-                                      </div>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div>
-                          <Label>Service {index + 1} Title</Label>
-                          <Input
-                            value={service.title.en}
-                            onChange={(e) => updateHomeService(index, 'title', 'en', e.target.value)}
-                            placeholder="Service title"
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={content.homeServices?.map((_, i) => `service-${i}`) || []}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {content.homeServices?.map((service, index) => (
+                          <SortableServiceItem
+                            key={`service-${index}`}
+                            id={`service-${index}`}
+                            index={index}
+                            service={service}
+                            lang="en"
+                            onUpdate={updateHomeService}
+                            onRemove={removeHomeService}
                           />
-                        </div>
-                        <div>
-                          <Label>Description</Label>
-                          <Textarea
-                            value={service.description.en}
-                            onChange={(e) => updateHomeService(index, 'description', 'en', e.target.value)}
-                            placeholder="Service description"
-                            rows={2}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 </CardContent>
               </Card>
