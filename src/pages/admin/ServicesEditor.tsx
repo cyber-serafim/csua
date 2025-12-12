@@ -356,26 +356,31 @@ const ServicesEditor = () => {
 
                   <TabsContent value="settings" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
+                      <div className="space-y-2">
                         <Label>{t({ uk: 'Іконка', en: 'Icon' })}</Label>
-                        <Select
-                          value={service.icon_name}
-                          onValueChange={(value) => updateService(service.id, 'icon_name', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableIcons.map((icon) => (
-                              <SelectItem key={icon} value={icon}>
-                                <div className="flex items-center gap-2">
-                                  {getIconComponent(icon)}
-                                  <span>{icon}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
+                            {getIconComponent(service.icon_name)}
+                          </div>
+                          <Select
+                            value={service.icon_name}
+                            onValueChange={(value) => updateService(service.id, 'icon_name', value)}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableIcons.map((icon) => (
+                                <SelectItem key={icon} value={icon}>
+                                  <div className="flex items-center gap-2">
+                                    {getIconComponent(icon)}
+                                    <span>{icon}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                       <div>
                         <Label>{t({ uk: 'Порядок', en: 'Sort Order' })}</Label>
