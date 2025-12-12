@@ -689,6 +689,28 @@ const PageEditor = () => {
     });
   };
 
+  const addHomeService = () => {
+    if (!content) return;
+    const newService = {
+      icon: 'Briefcase',
+      title: { uk: 'Нова послуга', en: 'New Service' },
+      description: { uk: 'Опис послуги', en: 'Service description' }
+    };
+    setContent({
+      ...content,
+      homeServices: [...(content.homeServices || []), newService]
+    });
+  };
+
+  const removeHomeService = (index: number) => {
+    if (!content || !content.homeServices) return;
+    const newServices = content.homeServices.filter((_, i) => i !== index);
+    setContent({
+      ...content,
+      homeServices: newServices
+    });
+  };
+
   if (!isAdmin || !content) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -808,10 +830,24 @@ const PageEditor = () => {
                     />
                   </div>
                   <div className="space-y-4">
-                    <Label className="text-lg font-semibold">Послуги</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold">Послуги</Label>
+                      <Button variant="outline" size="sm" onClick={addHomeService}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Додати послугу
+                      </Button>
+                    </div>
                     {content.homeServices?.map((service, index) => (
-                      <div key={index} className="p-4 border border-border rounded-lg space-y-4">
-                        <div className="flex items-center gap-4">
+                      <div key={index} className="p-4 border border-border rounded-lg space-y-4 relative">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeHomeService(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center gap-4 pr-10">
                           <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
                             {(() => {
                               const IconPreview = getIconComponent(service.icon);
@@ -1101,10 +1137,24 @@ const PageEditor = () => {
                     />
                   </div>
                   <div className="space-y-4">
-                    <Label className="text-lg font-semibold">Services</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold">Services</Label>
+                      <Button variant="outline" size="sm" onClick={addHomeService}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Service
+                      </Button>
+                    </div>
                     {content.homeServices?.map((service, index) => (
-                      <div key={index} className="p-4 border border-border rounded-lg space-y-4">
-                        <div className="flex items-center gap-4">
+                      <div key={index} className="p-4 border border-border rounded-lg space-y-4 relative">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeHomeService(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center gap-4 pr-10">
                           <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground shrink-0">
                             {(() => {
                               const IconPreview = getIconComponent(service.icon);
