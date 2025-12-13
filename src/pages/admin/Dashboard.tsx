@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { FileText, Plus, LogOut } from 'lucide-react';
+import { FileText, Plus, LogOut, BarChart3 } from 'lucide-react';
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -106,6 +106,9 @@ const Dashboard = () => {
 
           <Card className="hover:shadow-large transition-all duration-300">
             <CardHeader>
+              <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-2">
+                <BarChart3 className="h-6 w-6 text-primary-foreground" />
+              </div>
               <CardTitle>
                 {t({ uk: 'Статистика', en: 'Statistics' })}
               </CardTitle>
@@ -117,9 +120,10 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                {t({ uk: 'Скоро буде доступно', en: 'Coming soon' })}
-              </p>
+              <Button className="w-full" onClick={() => navigate('/admin/statistics')}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                {t({ uk: 'Переглянути статистику', en: 'View Statistics' })}
+              </Button>
             </CardContent>
           </Card>
         </div>

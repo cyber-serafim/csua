@@ -18,10 +18,36 @@ import PagesList from "./pages/admin/PagesList";
 import PageEditor from "./pages/admin/PageEditor";
 import ServicesEditor from "./pages/admin/ServicesEditor";
 import ServicePageEditor from "./pages/admin/ServicePageEditor";
+import Statistics from "./pages/admin/Statistics";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
+import { useVisitorTracking } from "./hooks/useVisitorTracking";
 
 const queryClient = new QueryClient();
+
+function AppRoutes() {
+  useVisitorTracking();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/services" element={<Services />} />
+      <Route path="/services/:id" element={<ServiceDetail />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/admin/login" element={<Login />} />
+      <Route path="/admin/dashboard" element={<Dashboard />} />
+      <Route path="/admin/set-password" element={<SetPassword />} />
+      <Route path="/admin/auth/callback" element={<AuthCallback />} />
+      <Route path="/admin/pages" element={<PagesList />} />
+      <Route path="/admin/pages/:slug" element={<PageEditor />} />
+      <Route path="/admin/services" element={<ServicesEditor />} />
+      <Route path="/admin/services/:id" element={<ServicePageEditor />} />
+      <Route path="/admin/statistics" element={<Statistics />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,23 +58,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/services/:id" element={<ServiceDetail />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/admin/login" element={<Login />} />
-              <Route path="/admin/dashboard" element={<Dashboard />} />
-              <Route path="/admin/set-password" element={<SetPassword />} />
-              <Route path="/admin/auth/callback" element={<AuthCallback />} />
-              <Route path="/admin/pages" element={<PagesList />} />
-              <Route path="/admin/pages/:slug" element={<PageEditor />} />
-              <Route path="/admin/services" element={<ServicesEditor />} />
-              <Route path="/admin/services/:id" element={<ServicePageEditor />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>
       </LanguageProvider>
