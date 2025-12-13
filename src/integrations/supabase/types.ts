@@ -84,6 +84,105 @@ export type Database = {
           },
         ]
       }
+      daily_stats: {
+        Row: {
+          avg_session_duration: number | null
+          created_at: string | null
+          date: string
+          id: string
+          proxy_visits: number | null
+          total_page_views: number | null
+          total_visits: number | null
+          unique_visitors: number | null
+          updated_at: string | null
+          vpn_visits: number | null
+        }
+        Insert: {
+          avg_session_duration?: number | null
+          created_at?: string | null
+          date: string
+          id?: string
+          proxy_visits?: number | null
+          total_page_views?: number | null
+          total_visits?: number | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+          vpn_visits?: number | null
+        }
+        Update: {
+          avg_session_duration?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          proxy_visits?: number | null
+          total_page_views?: number | null
+          total_visits?: number | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+          vpn_visits?: number | null
+        }
+        Relationships: []
+      }
+      ip_info: {
+        Row: {
+          city: string | null
+          connection_type: string | null
+          country: string | null
+          country_code: string | null
+          created_at: string | null
+          id: string
+          ip_address: string
+          is_datacenter: boolean | null
+          is_proxy: boolean | null
+          is_tor: boolean | null
+          is_vpn: boolean | null
+          isp: string | null
+          latitude: number | null
+          longitude: number | null
+          org: string | null
+          region: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          city?: string | null
+          connection_type?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address: string
+          is_datacenter?: boolean | null
+          is_proxy?: boolean | null
+          is_tor?: boolean | null
+          is_vpn?: boolean | null
+          isp?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          org?: string | null
+          region?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string | null
+          connection_type?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string
+          is_datacenter?: boolean | null
+          is_proxy?: boolean | null
+          is_tor?: boolean | null
+          is_vpn?: boolean | null
+          isp?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          org?: string | null
+          region?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       page_translations: {
         Row: {
           created_at: string | null
@@ -118,6 +217,50 @@ export type Database = {
             columns: ["page_id"]
             isOneToOne: false
             referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_views: {
+        Row: {
+          created_at: string | null
+          duration_seconds: number | null
+          entered_at: string | null
+          exited_at: string | null
+          id: string
+          page_path: string
+          page_url: string
+          referer: string | null
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          entered_at?: string | null
+          exited_at?: string | null
+          id?: string
+          page_path: string
+          page_url: string
+          referer?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_seconds?: number | null
+          entered_at?: string | null
+          exited_at?: string | null
+          id?: string
+          page_path?: string
+          page_url?: string
+          referer?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "visitor_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -231,6 +374,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      visitor_sessions: {
+        Row: {
+          browser: string | null
+          created_at: string | null
+          device_type: string | null
+          first_visit_at: string | null
+          id: string
+          ip_info_id: string | null
+          last_visit_at: string | null
+          os: string | null
+          session_id: string
+          total_visits: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          first_visit_at?: string | null
+          id?: string
+          ip_info_id?: string | null
+          last_visit_at?: string | null
+          os?: string | null
+          session_id: string
+          total_visits?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          first_visit_at?: string | null
+          id?: string
+          ip_info_id?: string | null
+          last_visit_at?: string | null
+          os?: string | null
+          session_id?: string
+          total_visits?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitor_sessions_ip_info_id_fkey"
+            columns: ["ip_info_id"]
+            isOneToOne: false
+            referencedRelation: "ip_info"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
