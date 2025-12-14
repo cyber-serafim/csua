@@ -110,62 +110,76 @@ Deno.serve(async (req) => {
     // For 'enter' action, process the full flow
     let ipInfoId: string | null = null;
 
-    // Check if we already have IP info
-    const { data: existingIpInfo } = await supabase
-      .from('ip_info')
-      .select('id')
-      .eq('ip_address', clientIP)
-      .maybeSingle();
+    console.log(`[track-visit] Processing IP: ${clientIP}, has token: ${!!ipInfoToken}`);
 
-    if (existingIpInfo) {
-      ipInfoId = existingIpInfo.id;
-    } else if (clientIP !== 'unknown' && ipInfoToken) {
-      // Fetch IP info from IPInfo.io
-      try {
-        const ipInfoResponse = await fetch(`https://ipinfo.io/${clientIP}?token=${ipInfoToken}`);
-        if (ipInfoResponse.ok) {
-          const ipData: IPInfoResponse = await ipInfoResponse.json();
+    // Check if we already have IP info for this IP
+    if (clientIP !== 'unknown') {
+      const { data: existingIpInfo } = await supabase
+        .from('ip_info')
+        .select('id')
+        .eq('ip_address', clientIP)
+        .maybeSingle();
+
+      if (existingIpInfo) {
+        ipInfoId = existingIpInfo.id;
+        console.log(`[track-visit] Found existing IP info: ${ipInfoId}`);
+      } else if (ipInfoToken) {
+        // Fetch IP info from IPInfo.io
+        console.log(`[track-visit] Fetching IP info from IPInfo.io for ${clientIP}`);
+        try {
+          const ipInfoResponse = await fetch(`https://ipinfo.io/${clientIP}?token=${ipInfoToken}`);
+          console.log(`[track-visit] IPInfo.io response status: ${ipInfoResponse.status}`);
           
-          let latitude: number | null = null;
-          let longitude: number | null = null;
-          if (ipData.loc) {
-            const [lat, lng] = ipData.loc.split(',').map(Number);
-            latitude = lat;
-            longitude = lng;
-          }
+          if (ipInfoResponse.ok) {
+            const ipData: IPInfoResponse = await ipInfoResponse.json();
+            console.log(`[track-visit] IPInfo.io data: ${JSON.stringify(ipData)}`);
+            
+            let latitude: number | null = null;
+            let longitude: number | null = null;
+            if (ipData.loc) {
+              const [lat, lng] = ipData.loc.split(',').map(Number);
+              latitude = lat;
+              longitude = lng;
+            }
 
-          const countryCode = ipData.country || null;
-          const connectionType = getConnectionType(ipData.privacy);
+            const countryCode = ipData.country || null;
+            const connectionType = getConnectionType(ipData.privacy);
 
-          const { data: newIpInfo, error: ipInsertError } = await supabase
-            .from('ip_info')
-            .insert({
-              ip_address: clientIP,
-              country: countryCode,
-              country_code: countryCode,
-              region: ipData.region || null,
-              city: ipData.city || null,
-              latitude,
-              longitude,
-              isp: ipData.org || null,
-              org: ipData.org || null,
-              is_vpn: ipData.privacy?.vpn || false,
-              is_proxy: ipData.privacy?.proxy || false,
-              is_tor: ipData.privacy?.tor || false,
-              is_datacenter: ipData.privacy?.hosting || false,
-              connection_type: connectionType,
-            })
-            .select('id')
-            .single();
+            const { data: newIpInfo, error: ipInsertError } = await supabase
+              .from('ip_info')
+              .insert({
+                ip_address: clientIP,
+                country: countryCode,
+                country_code: countryCode,
+                region: ipData.region || null,
+                city: ipData.city || null,
+                latitude,
+                longitude,
+                isp: ipData.org || null,
+                org: ipData.org || null,
+                is_vpn: ipData.privacy?.vpn || false,
+                is_proxy: ipData.privacy?.proxy || false,
+                is_tor: ipData.privacy?.tor || false,
+                is_datacenter: ipData.privacy?.hosting || false,
+                connection_type: connectionType,
+              })
+              .select('id')
+              .single();
 
-          if (!ipInsertError && newIpInfo) {
-            ipInfoId = newIpInfo.id;
+            if (!ipInsertError && newIpInfo) {
+              ipInfoId = newIpInfo.id;
+              console.log(`[track-visit] Created new IP info: ${ipInfoId}`);
+            } else {
+              console.error('[track-visit] Error inserting IP info:', ipInsertError);
+            }
           } else {
-            console.error('[track-visit] Error inserting IP info:', ipInsertError);
+            console.error(`[track-visit] IPInfo.io error response: ${await ipInfoResponse.text()}`);
           }
+        } catch (ipError) {
+          console.error('[track-visit] Error fetching IP info:', ipError);
         }
-      } catch (ipError) {
-        console.error('[track-visit] Error fetching IP info:', ipError);
+      } else {
+        console.log('[track-visit] No IPINFO_API_KEY configured, skipping IP info fetch');
       }
     }
 
