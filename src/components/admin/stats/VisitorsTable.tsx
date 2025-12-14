@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Monitor, Smartphone, Tablet } from 'lucide-react';
 
 interface Visitor {
   id: string;
@@ -16,11 +16,7 @@ interface Visitor {
   city: string | null;
   region: string | null;
   isp: string | null;
-  connection_type: string | null;
-  is_datacenter: boolean;
-  is_vpn: boolean;
-  is_proxy: boolean;
-  is_tor: boolean;
+  device_type: string | null;
   visit_count: number;
 }
 
@@ -31,7 +27,7 @@ export function VisitorsTable() {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [connectionFilter, setConnectionFilter] = useState('all');
+  const [deviceFilter, setDeviceFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [countries, setCountries] = useState<string[]>([]);
   const [page, setPage] = useState(0);
@@ -40,7 +36,7 @@ export function VisitorsTable() {
   useEffect(() => {
     fetchVisitors();
     fetchCountries();
-  }, [page, connectionFilter, countryFilter]);
+  }, [page, deviceFilter, countryFilter]);
 
   const fetchCountries = async () => {
     const { data } = await supabase
@@ -55,40 +51,29 @@ export function VisitorsTable() {
   const fetchVisitors = async () => {
     setLoading(true);
 
+    // First, get visitor sessions with their IP info and aggregate visit counts
     let query = supabase
-      .from('ip_info')
-      .select('*', { count: 'exact' });
+      .from('visitor_sessions')
+      .select(`
+        id,
+        device_type,
+        total_visits,
+        ip_info:ip_info_id (
+          id,
+          ip_address,
+          country,
+          region,
+          city,
+          isp
+        )
+      `, { count: 'exact' });
 
-    if (connectionFilter !== 'all') {
-      switch (connectionFilter) {
-        case 'vpn':
-          query = query.eq('is_vpn', true);
-          break;
-        case 'proxy':
-          query = query.eq('is_proxy', true);
-          break;
-        case 'tor':
-          query = query.eq('is_tor', true);
-          break;
-        case 'datacenter':
-          query = query.eq('is_datacenter', true);
-          break;
-        case 'residential':
-          query = query.eq('connection_type', 'residential');
-          break;
-      }
+    if (deviceFilter !== 'all') {
+      query = query.eq('device_type', deviceFilter);
     }
 
-    if (countryFilter !== 'all') {
-      query = query.eq('country', countryFilter);
-    }
-
-    if (search) {
-      query = query.or(`ip_address.ilike.%${search}%,city.ilike.%${search}%,isp.ilike.%${search}%`);
-    }
-
-    const { data, count, error } = await query
-      .order('created_at', { ascending: false })
+    const { data: sessions, count, error } = await query
+      .order('last_visit_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (error) {
@@ -97,22 +82,41 @@ export function VisitorsTable() {
       return;
     }
 
-    // Get visit counts for each IP
-    const visitorsWithCounts = await Promise.all(
-      (data || []).map(async (ip) => {
-        const { count: visitCount } = await supabase
-          .from('visitor_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('ip_info_id', ip.id);
-
+    // Transform and filter data
+    const visitorsData: Visitor[] = (sessions || [])
+      .filter((session) => session.ip_info)
+      .map((session) => {
+        const ipInfo = session.ip_info as any;
         return {
-          ...ip,
-          visit_count: visitCount || 0,
+          id: session.id,
+          ip_address: ipInfo?.ip_address || 'Unknown',
+          country: ipInfo?.country,
+          city: ipInfo?.city,
+          region: ipInfo?.region,
+          isp: ipInfo?.isp,
+          device_type: session.device_type,
+          visit_count: session.total_visits || 1,
         };
-      })
-    );
+      });
 
-    setVisitors(visitorsWithCounts);
+    // Apply country filter client-side (after join)
+    let filteredVisitors = visitorsData;
+    if (countryFilter !== 'all') {
+      filteredVisitors = visitorsData.filter((v) => v.country === countryFilter);
+    }
+
+    // Apply search filter client-side
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredVisitors = filteredVisitors.filter(
+        (v) =>
+          v.ip_address.toLowerCase().includes(searchLower) ||
+          v.city?.toLowerCase().includes(searchLower) ||
+          v.isp?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setVisitors(filteredVisitors);
     setTotalCount(count || 0);
     setLoading(false);
   };
@@ -122,12 +126,26 @@ export function VisitorsTable() {
     fetchVisitors();
   };
 
-  const getConnectionBadge = (visitor: Visitor) => {
-    if (visitor.is_tor) return <Badge variant="destructive">TOR</Badge>;
-    if (visitor.is_vpn) return <Badge variant="destructive">VPN</Badge>;
-    if (visitor.is_proxy) return <Badge variant="secondary">Proxy</Badge>;
-    if (visitor.is_datacenter) return <Badge variant="outline">Datacenter</Badge>;
-    return <Badge variant="default">{t({ uk: 'Реальна', en: 'Residential' })}</Badge>;
+  const getDeviceIcon = (deviceType: string | null) => {
+    switch (deviceType) {
+      case 'mobile':
+        return <Smartphone className="h-4 w-4" />;
+      case 'tablet':
+        return <Tablet className="h-4 w-4" />;
+      default:
+        return <Monitor className="h-4 w-4" />;
+    }
+  };
+
+  const getDeviceLabel = (deviceType: string | null) => {
+    switch (deviceType) {
+      case 'mobile':
+        return t({ uk: 'Мобільний', en: 'Mobile' });
+      case 'tablet':
+        return t({ uk: 'Планшет', en: 'Tablet' });
+      default:
+        return t({ uk: 'Десктоп', en: 'Desktop' });
+    }
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -152,17 +170,15 @@ export function VisitorsTable() {
             </Button>
           </div>
 
-          <Select value={connectionFilter} onValueChange={(v) => { setConnectionFilter(v); setPage(0); }}>
+          <Select value={deviceFilter} onValueChange={(v) => { setDeviceFilter(v); setPage(0); }}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder={t({ uk: 'Тип', en: 'Type' })} />
+              <SelectValue placeholder={t({ uk: 'Пристрій', en: 'Device' })} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t({ uk: 'Всі', en: 'All' })}</SelectItem>
-              <SelectItem value="residential">{t({ uk: 'Реальні', en: 'Residential' })}</SelectItem>
-              <SelectItem value="vpn">VPN</SelectItem>
-              <SelectItem value="proxy">Proxy</SelectItem>
-              <SelectItem value="tor">TOR</SelectItem>
-              <SelectItem value="datacenter">Datacenter</SelectItem>
+              <SelectItem value="desktop">{t({ uk: 'Десктоп', en: 'Desktop' })}</SelectItem>
+              <SelectItem value="mobile">{t({ uk: 'Мобільний', en: 'Mobile' })}</SelectItem>
+              <SelectItem value="tablet">{t({ uk: 'Планшет', en: 'Tablet' })}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -211,9 +227,16 @@ export function VisitorsTable() {
                     <TableCell>
                       {[visitor.city, visitor.region, visitor.country].filter(Boolean).join(', ') || '-'}
                     </TableCell>
-                    <TableCell className="max-w-48 truncate">{visitor.isp || '-'}</TableCell>
-                    <TableCell>{getConnectionBadge(visitor)}</TableCell>
-                    <TableCell>{visitor.visit_count}</TableCell>
+                    <TableCell className="max-w-48 truncate" title={visitor.isp || undefined}>
+                      {visitor.isp || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getDeviceIcon(visitor.device_type)}
+                        <span>{getDeviceLabel(visitor.device_type)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{visitor.visit_count}</TableCell>
                   </TableRow>
                 ))
               )}
