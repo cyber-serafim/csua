@@ -183,13 +183,18 @@ Deno.serve(async (req) => {
 
     if (existingSession) {
       dbSessionId = existingSession.id;
-      // Update last visit
+      // Update last visit and ip_info_id if we have it
+      const updateData: Record<string, unknown> = {
+        last_visit_at: new Date().toISOString(),
+        total_visits: (existingSession.total_visits || 1) + 1,
+      };
+      // Update ip_info_id if session doesn't have one yet
+      if (ipInfoId) {
+        updateData.ip_info_id = ipInfoId;
+      }
       await supabase
         .from('visitor_sessions')
-        .update({
-          last_visit_at: new Date().toISOString(),
-          total_visits: (existingSession.total_visits || 1) + 1,
-        })
+        .update(updateData)
         .eq('id', existingSession.id);
     } else {
       // Create new session
