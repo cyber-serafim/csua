@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Search, ChevronLeft, ChevronRight, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Monitor, Smartphone, Tablet, CalendarIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Visitor {
   id: string;
@@ -32,11 +35,13 @@ export function VisitorsTable() {
   const [countries, setCountries] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     fetchVisitors();
     fetchCountries();
-  }, [page, deviceFilter, countryFilter]);
+  }, [page, deviceFilter, countryFilter, dateFrom, dateTo]);
 
   const fetchCountries = async () => {
     const { data } = await supabase
@@ -70,6 +75,16 @@ export function VisitorsTable() {
 
     if (deviceFilter !== 'all') {
       query = query.eq('device_type', deviceFilter);
+    }
+
+    if (dateFrom) {
+      query = query.gte('first_visit_at', dateFrom.toISOString());
+    }
+
+    if (dateTo) {
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      query = query.lte('first_visit_at', endOfDay.toISOString());
     }
 
     const { data: sessions, count, error } = await query
@@ -157,42 +172,107 @@ export function VisitorsTable() {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 flex gap-2">
-            <Input
-              placeholder={t({ uk: 'Пошук по IP, місту, ISP...', en: 'Search by IP, city, ISP...' })}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <Button variant="secondary" onClick={handleSearch}>
-              <Search className="h-4 w-4" />
-            </Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 flex gap-2">
+              <Input
+                placeholder={t({ uk: 'Пошук по IP, місту, ISP...', en: 'Search by IP, city, ISP...' })}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <Button variant="secondary" onClick={handleSearch}>
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <Select value={deviceFilter} onValueChange={(v) => { setDeviceFilter(v); setPage(0); }}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder={t({ uk: 'Пристрій', en: 'Device' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t({ uk: 'Всі', en: 'All' })}</SelectItem>
+                <SelectItem value="desktop">{t({ uk: 'Десктоп', en: 'Desktop' })}</SelectItem>
+                <SelectItem value="mobile">{t({ uk: 'Мобільний', en: 'Mobile' })}</SelectItem>
+                <SelectItem value="tablet">{t({ uk: 'Планшет', en: 'Tablet' })}</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setPage(0); }}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder={t({ uk: 'Країна', en: 'Country' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t({ uk: 'Всі країни', en: 'All countries' })}</SelectItem>
+                {countries.map((country) => (
+                  <SelectItem key={country} value={country}>{country}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <Select value={deviceFilter} onValueChange={(v) => { setDeviceFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder={t({ uk: 'Пристрій', en: 'Device' })} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t({ uk: 'Всі', en: 'All' })}</SelectItem>
-              <SelectItem value="desktop">{t({ uk: 'Десктоп', en: 'Desktop' })}</SelectItem>
-              <SelectItem value="mobile">{t({ uk: 'Мобільний', en: 'Mobile' })}</SelectItem>
-              <SelectItem value="tablet">{t({ uk: 'Планшет', en: 'Tablet' })}</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Date Range Filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">{t({ uk: 'Період:', en: 'Period:' })}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[140px] justify-start text-left font-normal",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "dd.MM.yyyy") : t({ uk: 'Від', en: 'From' })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={(date) => { setDateFrom(date); setPage(0); }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
 
-          <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setPage(0); }}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder={t({ uk: 'Країна', en: 'Country' })} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t({ uk: 'Всі країни', en: 'All countries' })}</SelectItem>
-              {countries.map((country) => (
-                <SelectItem key={country} value={country}>{country}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[140px] justify-start text-left font-normal",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "dd.MM.yyyy") : t({ uk: 'До', en: 'To' })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={(date) => { setDateTo(date); setPage(0); }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setDateFrom(undefined); setDateTo(undefined); setPage(0); }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                {t({ uk: 'Скинути', en: 'Clear' })}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Table */}
