@@ -5,6 +5,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiting (resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 30; // Max 30 requests per minute per IP
+
+function checkRateLimit(clientIP: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = rateLimitMap.get(clientIP);
+  
+  if (!entry || now > entry.resetTime) {
+    // Reset or create new entry
+    rateLimitMap.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
+  }
+  
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { allowed: false, remaining: 0 };
+  }
+  
+  entry.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - entry.count };
+}
+
+// Clean up old entries periodically (every 100 requests)
+let requestCounter = 0;
+function cleanupRateLimitMap() {
+  requestCounter++;
+  if (requestCounter % 100 === 0) {
+    const now = Date.now();
+    for (const [ip, entry] of rateLimitMap.entries()) {
+      if (now > entry.resetTime) {
+        rateLimitMap.delete(ip);
+      }
+    }
+  }
+}
+
 interface VisitData {
   sessionId: string;
   pageUrl: string;
@@ -72,19 +109,50 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Get client IP from headers first for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
+    // Apply rate limiting
+    cleanupRateLimitMap();
+    const rateLimit = checkRateLimit(clientIP);
+    
+    if (!rateLimit.allowed) {
+      console.log(`[track-visit] Rate limit exceeded for IP: ${clientIP}`);
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Retry-After': '60'
+        },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const ipInfoToken = Deno.env.get('IPINFO_API_KEY');
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get client IP from headers
-    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
-
     const visitData: VisitData = await req.json();
     const { sessionId, pageUrl, pagePath, referer, userAgent, action, pageViewId, duration } = visitData;
+
+    // Basic input validation
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 100) {
+      return new Response(JSON.stringify({ error: 'Invalid sessionId' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!pagePath || typeof pagePath !== 'string' || pagePath.length > 500) {
+      return new Response(JSON.stringify({ error: 'Invalid pagePath' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     console.log(`[track-visit] Action: ${action}, Session: ${sessionId}, Path: ${pagePath}, IP: ${clientIP}`);
 
