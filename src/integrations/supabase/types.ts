@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      backup_content: {
+        Row: {
+          content_en: string
+          content_key: string
+          content_uk: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          content_en?: string
+          content_key: string
+          content_uk?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          content_en?: string
+          content_key?: string
+          content_uk?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_block_translations: {
         Row: {
           block_id: string

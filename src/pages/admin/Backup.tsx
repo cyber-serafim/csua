@@ -5,16 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, Download, Database, FolderArchive, Info, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Download, Database, FolderArchive, Info, ExternalLink, Copy, Check, Edit } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
+interface ContentMap {
+  [key: string]: { uk: string; en: string };
+}
 
 const Backup = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [content, setContent] = useState<ContentMap>({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { language } = useLanguage();
 
   useEffect(() => {
     checkUser();
@@ -33,15 +39,12 @@ const Backup = () => {
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
     if (!roles) {
       toast({
-        title: t({ uk: 'Доступ заборонено', en: 'Access Denied' }),
-        description: t({ 
-          uk: 'У вас немає прав адміністратора', 
-          en: 'You do not have administrator rights' 
-        }),
+        title: language === 'uk' ? 'Доступ заборонено' : 'Access Denied',
+        description: language === 'uk' ? 'У вас немає прав адміністратора' : 'You do not have administrator rights',
         variant: 'destructive',
       });
       navigate('/');
@@ -49,6 +52,36 @@ const Backup = () => {
     }
 
     setIsAdmin(true);
+    fetchContent();
+  };
+
+  const fetchContent = async () => {
+    const { data, error } = await supabase
+      .from('backup_content')
+      .select('content_key, content_uk, content_en');
+
+    if (error) {
+      console.error('Error fetching backup content:', error);
+      setLoading(false);
+      return;
+    }
+
+    const contentMap: ContentMap = {};
+    data?.forEach(item => {
+      contentMap[item.content_key] = {
+        uk: item.content_uk,
+        en: item.content_en
+      };
+    });
+    setContent(contentMap);
+    setLoading(false);
+  };
+
+  const t = (key: string, fallback: { uk: string; en: string }): string => {
+    if (content[key]) {
+      return content[key][language];
+    }
+    return fallback[language];
   };
 
   const copyToClipboard = async (text: string, index: number) => {
@@ -57,13 +90,13 @@ const Backup = () => {
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
       toast({
-        title: t({ uk: 'Скопійовано', en: 'Copied' }),
-        description: t({ uk: 'Команду скопійовано в буфер обміну', en: 'Command copied to clipboard' }),
+        title: language === 'uk' ? 'Скопійовано' : 'Copied',
+        description: language === 'uk' ? 'Команду скопійовано в буфер обміну' : 'Command copied to clipboard',
       });
     } catch (err) {
       toast({
-        title: t({ uk: 'Помилка', en: 'Error' }),
-        description: t({ uk: 'Не вдалося скопіювати', en: 'Failed to copy' }),
+        title: language === 'uk' ? 'Помилка' : 'Error',
+        description: language === 'uk' ? 'Не вдалося скопіювати' : 'Failed to copy',
         variant: 'destructive',
       });
     }
@@ -109,10 +142,10 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
 }`,
   };
 
-  if (!isAdmin) {
+  if (!isAdmin || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>{t({ uk: 'Завантаження...', en: 'Loading...' })}</p>
+        <p>{language === 'uk' ? 'Завантаження...' : 'Loading...'}</p>
       </div>
     );
   }
@@ -142,18 +175,22 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              {t({ uk: 'Backup сайту', en: 'Site Backup' })}
+              {t('page_title', { uk: 'Backup сайту', en: 'Site Backup' })}
             </h1>
           </div>
+          <Button variant="outline" onClick={() => navigate('/admin/backup/edit')}>
+            <Edit className="h-4 w-4 mr-2" />
+            {language === 'uk' ? 'Редагувати' : 'Edit'}
+          </Button>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Alert className="mb-6">
           <Info className="h-4 w-4" />
-          <AlertTitle>{t({ uk: 'Важлива інформація', en: 'Important Information' })}</AlertTitle>
+          <AlertTitle>{t('important_info_title', { uk: 'Важлива інформація', en: 'Important Information' })}</AlertTitle>
           <AlertDescription>
-            {t({ 
+            {t('important_info_text', { 
               uk: 'Цей сайт побудований на Lovable.dev з використанням React + Vite. Дані зберігаються в Supabase (PostgreSQL). Для повного бекапу потрібно зберегти код проекту та дані бази даних.', 
               en: 'This site is built on Lovable.dev using React + Vite. Data is stored in Supabase (PostgreSQL). For a complete backup, you need to save the project code and database data.' 
             })}
@@ -169,9 +206,9 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
                   <FolderArchive className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <CardTitle>{t({ uk: 'Бекап коду сайту', en: 'Site Code Backup' })}</CardTitle>
+                  <CardTitle>{t('code_backup_title', { uk: 'Бекап коду сайту', en: 'Site Code Backup' })}</CardTitle>
                   <CardDescription>
-                    {t({ uk: 'Збереження файлів проекту', en: 'Saving project files' })}
+                    {t('code_backup_description', { uk: 'Збереження файлів проекту', en: 'Saving project files' })}
                   </CardDescription>
                 </div>
               </div>
@@ -180,19 +217,19 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="github">
                   <AccordionTrigger>
-                    {t({ uk: 'Метод 1: Через GitHub (рекомендовано)', en: 'Method 1: Via GitHub (recommended)' })}
+                    {t('method_github_title', { uk: 'Метод 1: Через GitHub (рекомендовано)', en: 'Method 1: Via GitHub (recommended)' })}
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <p className="text-muted-foreground">
-                      {t({ 
+                      {t('method_github_text', { 
                         uk: "Якщо проект підключено до GitHub, код автоматично синхронізується.", 
                         en: "If the project is connected to GitHub, the code is automatically synchronized." 
                       })}
                     </p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
-                      <li>{t({ uk: 'Перейдіть в налаштування проекту на Lovable.dev', en: 'Go to project settings on Lovable.dev' })}</li>
-                      <li>{t({ uk: 'Підключіть GitHub репозиторій (якщо ще не підключено)', en: 'Connect GitHub repository (if not already connected)' })}</li>
-                      <li>{t({ uk: 'Клонуйте репозиторій локально:', en: 'Clone the repository locally:' })}</li>
+                      <li>{language === 'uk' ? 'Перейдіть в налаштування проекту на Lovable.dev' : 'Go to project settings on Lovable.dev'}</li>
+                      <li>{language === 'uk' ? 'Підключіть GitHub репозиторій (якщо ще не підключено)' : 'Connect GitHub repository (if not already connected)'}</li>
+                      <li>{language === 'uk' ? 'Клонуйте репозиторій локально:' : 'Clone the repository locally:'}</li>
                     </ol>
                     <CodeBlock code={codeBlocks.cloneRepo} index={1} />
                   </AccordionContent>
@@ -200,24 +237,24 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
 
                 <AccordionItem value="download">
                   <AccordionTrigger>
-                    {t({ uk: 'Метод 2: Завантаження архіву', en: 'Method 2: Download archive' })}
+                    {t('method_download_title', { uk: 'Метод 2: Завантаження архіву', en: 'Method 2: Download archive' })}
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <p className="text-muted-foreground">
-                      {t({ 
+                      {t('method_download_text', { 
                         uk: 'Якщо проект підключено до GitHub, ви можете завантажити ZIP-архів безпосередньо:', 
                         en: 'If the project is connected to GitHub, you can download a ZIP archive directly:' 
                       })}
                     </p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
-                      <li>{t({ uk: 'Відкрийте ваш GitHub репозиторій', en: 'Open your GitHub repository' })}</li>
-                      <li>{t({ uk: 'Натисніть зелену кнопку "Code"', en: 'Click the green "Code" button' })}</li>
-                      <li>{t({ uk: 'Виберіть "Download ZIP"', en: 'Select "Download ZIP"' })}</li>
+                      <li>{language === 'uk' ? 'Відкрийте ваш GitHub репозиторій' : 'Open your GitHub repository'}</li>
+                      <li>{language === 'uk' ? 'Натисніть зелену кнопку "Code"' : 'Click the green "Code" button'}</li>
+                      <li>{language === 'uk' ? 'Виберіть "Download ZIP"' : 'Select "Download ZIP"'}</li>
                     </ol>
                     <Button variant="outline" asChild>
                       <a href="https://github.com" target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        {t({ uk: 'Відкрити GitHub', en: 'Open GitHub' })}
+                        {language === 'uk' ? 'Відкрити GitHub' : 'Open GitHub'}
                       </a>
                     </Button>
                   </AccordionContent>
@@ -234,9 +271,9 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
                   <Database className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <CardTitle>{t({ uk: 'Бекап бази даних', en: 'Database Backup' })}</CardTitle>
+                  <CardTitle>{t('db_backup_title', { uk: 'Бекап бази даних', en: 'Database Backup' })}</CardTitle>
                   <CardDescription>
-                    {t({ uk: 'Експорт даних з Supabase', en: 'Export data from Supabase' })}
+                    {t('db_backup_description', { uk: 'Експорт даних з Supabase', en: 'Export data from Supabase' })}
                   </CardDescription>
                 </div>
               </div>
@@ -245,7 +282,7 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  {t({ 
+                  {t('db_backup_alert', { 
                     uk: 'Для доступу до бази даних вам потрібні облікові дані Supabase. Зверніться до адміністратора Lovable Cloud або перегляньте налаштування проекту.', 
                     en: 'To access the database, you need Supabase credentials. Contact the Lovable Cloud administrator or check the project settings.' 
                   })}
@@ -255,11 +292,11 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="schema">
                   <AccordionTrigger>
-                    {t({ uk: 'Експорт схеми бази даних', en: 'Export database schema' })}
+                    {t('export_schema_title', { uk: 'Експорт схеми бази даних', en: 'Export database schema' })}
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <p className="text-muted-foreground text-sm">
-                      {t({ 
+                      {t('export_schema_text', { 
                         uk: 'Схема містить структуру таблиць, індекси, RLS-політики тощо.', 
                         en: 'The schema contains table structure, indexes, RLS policies, etc.' 
                       })}
@@ -270,11 +307,11 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
 
                 <AccordionItem value="data">
                   <AccordionTrigger>
-                    {t({ uk: 'Експорт даних', en: 'Export data' })}
+                    {t('export_data_title', { uk: 'Експорт даних', en: 'Export data' })}
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <p className="text-muted-foreground text-sm">
-                      {t({ 
+                      {t('export_data_text', { 
                         uk: 'Експортує лише дані без структури таблиць.', 
                         en: 'Exports only data without table structure.' 
                       })}
@@ -285,11 +322,11 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
 
                 <AccordionItem value="full">
                   <AccordionTrigger>
-                    {t({ uk: 'Повний бекап (схема + дані)', en: 'Full backup (schema + data)' })}
+                    {t('full_backup_title', { uk: 'Повний бекап (схема + дані)', en: 'Full backup (schema + data)' })}
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4">
                     <p className="text-muted-foreground text-sm">
-                      {t({ 
+                      {t('full_backup_text', { 
                         uk: 'Рекомендований варіант - містить все необхідне для повного відновлення.', 
                         en: 'Recommended option - contains everything needed for full recovery.' 
                       })}
@@ -309,16 +346,16 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
                   <Download className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <CardTitle>{t({ uk: 'Відновлення на іншому хостингу', en: 'Restore on another hosting' })}</CardTitle>
+                  <CardTitle>{t('restore_title', { uk: 'Відновлення на іншому хостингу', en: 'Restore on another hosting' })}</CardTitle>
                   <CardDescription>
-                    {t({ uk: 'Покрокова інструкція', en: 'Step-by-step guide' })}
+                    {t('restore_description', { uk: 'Покрокова інструкція', en: 'Step-by-step guide' })}
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <h3 className="font-semibold">{t({ uk: 'Крок 1: Підготовка сервера', en: 'Step 1: Server preparation' })}</h3>
+                <h3 className="font-semibold">{t('step1_title', { uk: 'Крок 1: Підготовка сервера', en: 'Step 1: Server preparation' })}</h3>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>Node.js 18+ або Bun</li>
                   <li>PostgreSQL 15+ (або Supabase на новому проекті)</li>
@@ -327,51 +364,51 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-semibold">{t({ uk: 'Крок 2: Розгортання коду', en: 'Step 2: Deploy code' })}</h3>
+                <h3 className="font-semibold">{t('step2_title', { uk: 'Крок 2: Розгортання коду', en: 'Step 2: Deploy code' })}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t({ uk: 'Завантажте код та встановіть залежності:', en: 'Download code and install dependencies:' })}
+                  {t('step2_text', { uk: 'Завантажте код та встановіть залежності:', en: 'Download code and install dependencies:' })}
                 </p>
                 <CodeBlock code={codeBlocks.installDeps} index={5} />
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-semibold">{t({ uk: 'Крок 3: Налаштування змінних оточення', en: 'Step 3: Configure environment variables' })}</h3>
+                <h3 className="font-semibold">{t('step3_title', { uk: 'Крок 3: Налаштування змінних оточення', en: 'Step 3: Configure environment variables' })}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t({ uk: 'Створіть файл .env з новими даними Supabase:', en: 'Create .env file with new Supabase data:' })}
+                  {t('step3_text', { uk: 'Створіть файл .env з новими даними Supabase:', en: 'Create .env file with new Supabase data:' })}
                 </p>
                 <CodeBlock code={codeBlocks.envExample} index={6} />
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-semibold">{t({ uk: 'Крок 4: Відновлення бази даних', en: 'Step 4: Restore database' })}</h3>
+                <h3 className="font-semibold">{t('step4_title', { uk: 'Крок 4: Відновлення бази даних', en: 'Step 4: Restore database' })}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t({ uk: 'Імпортуйте бекап в нову базу даних:', en: 'Import backup to new database:' })}
+                  {t('step4_text', { uk: 'Імпортуйте бекап в нову базу даних:', en: 'Import backup to new database:' })}
                 </p>
                 <CodeBlock code={codeBlocks.restoreDb} index={7} />
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-semibold">{t({ uk: 'Крок 5: Збірка та запуск', en: 'Step 5: Build and run' })}</h3>
+                <h3 className="font-semibold">{t('step5_title', { uk: 'Крок 5: Збірка та запуск', en: 'Step 5: Build and run' })}</h3>
                 <CodeBlock code={codeBlocks.buildProject} index={8} />
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-semibold">{t({ uk: 'Крок 6: Налаштування Nginx', en: 'Step 6: Configure Nginx' })}</h3>
+                <h3 className="font-semibold">{t('step6_title', { uk: 'Крок 6: Налаштування Nginx', en: 'Step 6: Configure Nginx' })}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t({ uk: 'Приклад конфігурації для SPA:', en: 'Example configuration for SPA:' })}
+                  {t('step6_text', { uk: 'Приклад конфігурації для SPA:', en: 'Example configuration for SPA:' })}
                 </p>
                 <CodeBlock code={codeBlocks.nginxConfig} index={9} />
               </div>
 
               <Alert className="mt-4">
                 <Info className="h-4 w-4" />
-                <AlertTitle>{t({ uk: 'Не забудьте', en: "Don't forget" })}</AlertTitle>
+                <AlertTitle>{t('dont_forget_title', { uk: 'Не забудьте', en: "Don't forget" })}</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                    <li>{t({ uk: 'Оновити DNS-записи домену', en: 'Update domain DNS records' })}</li>
-                    <li>{t({ uk: 'Налаштувати SSL-сертифікат (Let\'s Encrypt)', en: "Configure SSL certificate (Let's Encrypt)" })}</li>
-                    <li>{t({ uk: 'Перенести Edge Functions в новий проект Supabase', en: 'Transfer Edge Functions to new Supabase project' })}</li>
-                    <li>{t({ uk: 'Оновити секрети та API ключі', en: 'Update secrets and API keys' })}</li>
+                    <li>{t('dont_forget_item1', { uk: 'Оновити DNS-записи домену', en: 'Update domain DNS records' })}</li>
+                    <li>{t('dont_forget_item2', { uk: 'Налаштувати SSL-сертифікат (Let\'s Encrypt)', en: "Configure SSL certificate (Let's Encrypt)" })}</li>
+                    <li>{t('dont_forget_item3', { uk: 'Перенести Edge Functions в новий проект Supabase', en: 'Transfer Edge Functions to new Supabase project' })}</li>
+                    <li>{t('dont_forget_item4', { uk: 'Оновити секрети та API ключі', en: 'Update secrets and API keys' })}</li>
                   </ul>
                 </AlertDescription>
               </Alert>

@@ -20,6 +20,7 @@ import ServicesEditor from "./pages/admin/ServicesEditor";
 import ServicePageEditor from "./pages/admin/ServicePageEditor";
 import Statistics from "./pages/admin/Statistics";
 import Backup from "./pages/admin/Backup";
+import BackupEditor from "./pages/admin/BackupEditor";
 import NotFound from "./pages/NotFound";
 import ScrollToTop from "./components/ScrollToTop";
 import { useVisitorTracking } from "./hooks/useVisitorTracking";
@@ -46,6 +47,7 @@ function AppRoutes() {
       <Route path="/admin/services/:id" element={<ServicePageEditor />} />
       <Route path="/admin/statistics" element={<Statistics />} />
       <Route path="/admin/backup" element={<Backup />} />
+      <Route path="/admin/backup/edit" element={<BackupEditor />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
