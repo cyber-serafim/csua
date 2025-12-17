@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { FileText, Plus, LogOut, BarChart3, HardDrive } from 'lucide-react';
+import { FileText, Plus, LogOut, BarChart3, HardDrive, Users } from 'lucide-react';
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -146,6 +146,29 @@ const Dashboard = () => {
               <Button className="w-full" onClick={() => navigate('/admin/backup')}>
                 <HardDrive className="mr-2 h-4 w-4" />
                 {t({ uk: 'Керувати бекапами', en: 'Manage Backups' })}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-large transition-all duration-300">
+            <CardHeader>
+              <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-2">
+                <Users className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <CardTitle>
+                CRM
+              </CardTitle>
+              <CardDescription>
+                {t({ 
+                  uk: 'Управління клієнтами та угодами', 
+                  en: 'Customer and deal management' 
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => navigate('/admin/crm')}>
+                <Users className="mr-2 h-4 w-4" />
+                {t({ uk: 'Відкрити CRM', en: 'Open CRM' })}
               </Button>
             </CardContent>
           </Card>
