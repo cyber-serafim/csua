@@ -251,20 +251,20 @@ export const DealsTab = () => {
                 </div>
                 <div>
                   <Label>{t({ uk: 'Компанія', en: 'Company' })}</Label>
-                  <Select value={formData.company_id} onValueChange={value => setFormData({ ...formData, company_id: value })}>
+                  <Select value={formData.company_id || 'none'} onValueChange={value => setFormData({ ...formData, company_id: value === 'none' ? '' : value })}>
                     <SelectTrigger><SelectValue placeholder={t({ uk: 'Оберіть компанію', en: 'Select company' })} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t({ uk: 'Без компанії', en: 'No company' })}</SelectItem>
+                      <SelectItem value="none">{t({ uk: 'Без компанії', en: 'No company' })}</SelectItem>
                       {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>{t({ uk: 'Контакт', en: 'Contact' })}</Label>
-                  <Select value={formData.contact_id} onValueChange={value => setFormData({ ...formData, contact_id: value })}>
+                  <Select value={formData.contact_id || 'none'} onValueChange={value => setFormData({ ...formData, contact_id: value === 'none' ? '' : value })}>
                     <SelectTrigger><SelectValue placeholder={t({ uk: 'Оберіть контакт', en: 'Select contact' })} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t({ uk: 'Без контакту', en: 'No contact' })}</SelectItem>
+                      <SelectItem value="none">{t({ uk: 'Без контакту', en: 'No contact' })}</SelectItem>
                       {contacts.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
