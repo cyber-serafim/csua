@@ -33,6 +33,8 @@ type Contact = { id: string; first_name: string; last_name: string | null };
 export const TasksTab = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [filterDealId, setFilterDealId] = useState('');
+  const [filterContactId, setFilterContactId] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [formData, setFormData] = useState({ title: '', description: '', deal_id: '', contact_id: '', due_date: '' });
@@ -174,7 +176,9 @@ export const TasksTab = () => {
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === 'all' || (filter === 'completed' ? task.completed : !task.completed);
-    return matchesSearch && matchesFilter;
+    const matchesDeal = !filterDealId || task.deal_id === filterDealId;
+    const matchesContact = !filterContactId || task.contact_id === filterContactId;
+    return matchesSearch && matchesFilter && matchesDeal && matchesContact;
   });
 
   const isOverdue = (dueDate: string | null) => {
@@ -244,26 +248,48 @@ export const TasksTab = () => {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row gap-4 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t({ uk: 'Пошук...', en: 'Search...' })}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t({ uk: 'Пошук...', en: 'Search...' })}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filter} onValueChange={(v: typeof filter) => setFilter(v)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t({ uk: 'Всі задачі', en: 'All tasks' })}</SelectItem>
+                <SelectItem value="pending">{t({ uk: 'Невиконані', en: 'Pending' })}</SelectItem>
+                <SelectItem value="completed">{t({ uk: 'Виконані', en: 'Completed' })}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={filter} onValueChange={(v: typeof filter) => setFilter(v)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t({ uk: 'Всі задачі', en: 'All tasks' })}</SelectItem>
-              <SelectItem value="pending">{t({ uk: 'Невиконані', en: 'Pending' })}</SelectItem>
-              <SelectItem value="completed">{t({ uk: 'Виконані', en: 'Completed' })}</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Select value={filterDealId || 'all'} onValueChange={v => setFilterDealId(v === 'all' ? '' : v)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder={t({ uk: 'Фільтр за угодою', en: 'Filter by deal' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t({ uk: 'Всі угоди', en: 'All deals' })}</SelectItem>
+                {deals.map(d => <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterContactId || 'all'} onValueChange={v => setFilterContactId(v === 'all' ? '' : v)}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder={t({ uk: 'Фільтр за контактом', en: 'Filter by contact' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t({ uk: 'Всі контакти', en: 'All contacts' })}</SelectItem>
+                {contacts.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {isLoading ? (
           <p className="text-center py-4">{t({ uk: 'Завантаження...', en: 'Loading...' })}</p>
