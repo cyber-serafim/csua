@@ -258,6 +258,18 @@ supabase db dump --db-url "postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].sup
 supabase db dump --db-url "postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres" --data-only > backup_data.sql`,
     fullBackup: `# Повний бекап (схема + дані)
 supabase db dump --db-url "postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres" -f full_backup.sql`,
+    pgDumpCustom: `# Повний дамп у форматі custom (стиснений, для pg_restore)
+pg_dump -h db.[PROJECT_REF].supabase.co -p 5432 -U postgres -d postgres \\
+  -F c -b -v -f csua_backup.dump
+
+# Параметри:
+# -F c - custom format (стиснений, підтримує вибіркове відновлення)
+# -b - включити large objects (BLOB)
+# -v - verbose (детальний вивід)
+# -f - вихідний файл
+
+# Відновлення з .dump файлу:
+pg_restore -h NEW_HOST -p 5432 -U postgres -d postgres -v csua_backup.dump`,
     restoreDb: `# Відновлення бази даних на новому сервері
 psql -h NEW_HOST -U postgres -d postgres < full_backup.sql`,
     envExample: `VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -547,6 +559,28 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
                       })}
                     </p>
                     <CodeBlock code={codeBlocks.fullBackup} index={4} />
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="pgdump">
+                  <AccordionTrigger>
+                    {language === 'uk' ? 'pg_dump (Custom Format .dump)' : 'pg_dump (Custom Format .dump)'}
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <p className="text-muted-foreground text-sm">
+                      {language === 'uk' 
+                        ? 'Найпотужніший варіант - створює стиснений бінарний дамп з підтримкою вибіркового відновлення через pg_restore.' 
+                        : 'Most powerful option - creates compressed binary dump with selective restore support via pg_restore.'}
+                    </p>
+                    <Alert className="mb-2">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        {language === 'uk' 
+                          ? 'Потрібен локально встановлений PostgreSQL client (pg_dump). Виконується з командного рядка.' 
+                          : 'Requires locally installed PostgreSQL client (pg_dump). Run from command line.'}
+                      </AlertDescription>
+                    </Alert>
+                    <CodeBlock code={codeBlocks.pgDumpCustom} index={10} />
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
