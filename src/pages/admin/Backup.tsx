@@ -19,6 +19,7 @@ const Backup = () => {
   const [content, setContent] = useState<ContentMap>({});
   const [loading, setLoading] = useState(true);
   const [generatingBackup, setGeneratingBackup] = useState(false);
+  const [generatingFullDump, setGeneratingFullDump] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { language } = useLanguage();
@@ -112,6 +113,50 @@ const Backup = () => {
       });
     } finally {
       setGeneratingBackup(false);
+    }
+  };
+
+  const generateFullDump = async () => {
+    setGeneratingFullDump(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-db-dump');
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to generate dump');
+      }
+
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `csua_full_dump_${date}.sql`;
+
+      const blob = new Blob([data.dump], { type: 'application/sql' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: language === 'uk' ? 'Повний дамп створено' : 'Full dump created',
+        description: language === 'uk' 
+          ? `Файл ${filename} завантажено. Розмістіть його в public/backup/` 
+          : `File ${filename} downloaded. Place it in public/backup/`,
+      });
+    } catch (error) {
+      console.error('Full dump error:', error);
+      toast({
+        title: language === 'uk' ? 'Помилка' : 'Error',
+        description: language === 'uk' ? 'Не вдалося створити повний дамп' : 'Failed to create full dump',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingFullDump(false);
     }
   };
 
@@ -407,6 +452,45 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
                   {language === 'uk' 
                     ? 'Файл буде завантажено. Розмістіть його в public/backup/ для збереження в проекті.' 
                     : 'File will be downloaded. Place it in public/backup/ to save in the project.'}
+                </p>
+              </div>
+
+              {/* Full PostgreSQL Dump Button */}
+              <div className="p-4 border border-border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">
+                      {language === 'uk' ? 'Повний PostgreSQL дамп' : 'Full PostgreSQL Dump'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'uk' 
+                        ? 'Генерує повний SQL дамп зі структурою таблиць та даними' 
+                        : 'Generates full SQL dump with table structures and data'}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={generateFullDump} 
+                    disabled={generatingFullDump}
+                    className="min-w-[180px]"
+                    variant="secondary"
+                  >
+                    {generatingFullDump ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {language === 'uk' ? 'Генерація...' : 'Generating...'}
+                      </>
+                    ) : (
+                      <>
+                        <Database className="mr-2 h-4 w-4" />
+                        {language === 'uk' ? 'Створити дамп' : 'Create Dump'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {language === 'uk' 
+                    ? 'Включає CREATE TABLE, INSERT та функції. Розмістіть файл в public/backup/' 
+                    : 'Includes CREATE TABLE, INSERT and functions. Place file in public/backup/'}
                 </p>
               </div>
 
