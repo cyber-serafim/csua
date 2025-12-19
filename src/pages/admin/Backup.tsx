@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, Download, Database, FolderArchive, Info, ExternalLink, Copy, Check, Edit } from 'lucide-react';
+import { ArrowLeft, Download, Database, FolderArchive, Info, ExternalLink, Copy, Check, Edit, Loader2, FileDown } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
@@ -18,9 +18,102 @@ const Backup = () => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [content, setContent] = useState<ContentMap>({});
   const [loading, setLoading] = useState(true);
+  const [generatingBackup, setGeneratingBackup] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { language } = useLanguage();
+
+  const escapeSQL = (value: unknown): string => {
+    if (value === null || value === undefined) return 'NULL';
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+    if (typeof value === 'object') return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
+    return `'${String(value).replace(/'/g, "''")}'`;
+  };
+
+  const generateSqlBackup = async () => {
+    setGeneratingBackup(true);
+    try {
+      const tables = [
+        'pages',
+        'page_translations',
+        'content_blocks',
+        'content_block_translations',
+        'services',
+        'service_translations',
+        'crm_companies',
+        'crm_contacts',
+        'crm_deals',
+        'crm_tasks',
+        'crm_activities',
+        'user_roles',
+        'backup_content',
+        'daily_stats',
+        'visitor_sessions',
+        'ip_info',
+        'page_views'
+      ];
+
+      let sqlContent = `-- CSUA Database Full Backup\n`;
+      sqlContent += `-- Generated: ${new Date().toISOString()}\n`;
+      sqlContent += `-- Project: CSUA\n\n`;
+
+      for (const tableName of tables) {
+        const { data, error } = await supabase
+          .from(tableName as any)
+          .select('*');
+
+        if (error) {
+          console.error(`Error fetching ${tableName}:`, error);
+          continue;
+        }
+
+        if (data && data.length > 0) {
+          sqlContent += `-- Table: ${tableName}\n`;
+          sqlContent += `-- Records: ${data.length}\n`;
+
+          const columns = Object.keys(data[0]);
+          
+          for (const row of data) {
+            const values = columns.map(col => escapeSQL(row[col]));
+            sqlContent += `INSERT INTO public.${tableName} (${columns.join(', ')}) VALUES (${values.join(', ')});\n`;
+          }
+          sqlContent += '\n';
+        }
+      }
+
+      // Generate filename with date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `csua_database_backup_${date}.sql`;
+
+      // Create download
+      const blob = new Blob([sqlContent], { type: 'application/sql' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: language === 'uk' ? 'Бекап створено' : 'Backup created',
+        description: language === 'uk' 
+          ? `Файл ${filename} завантажено. Розмістіть його в public/backup/` 
+          : `File ${filename} downloaded. Place it in public/backup/`,
+      });
+    } catch (error) {
+      console.error('Backup error:', error);
+      toast({
+        title: language === 'uk' ? 'Помилка' : 'Error',
+        description: language === 'uk' ? 'Не вдалося створити бекап' : 'Failed to create backup',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingBackup(false);
+    }
+  };
 
   useEffect(() => {
     checkUser();
@@ -279,6 +372,44 @@ VITE_SUPABASE_PROJECT_ID=your-project-id`,
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Quick SQL Backup Button */}
+              <div className="p-4 border border-border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">
+                      {language === 'uk' ? 'Швидкий SQL бекап' : 'Quick SQL Backup'}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'uk' 
+                        ? 'Створіть повний SQL бекап всіх таблиць бази даних' 
+                        : 'Create a full SQL backup of all database tables'}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={generateSqlBackup} 
+                    disabled={generatingBackup}
+                    className="min-w-[180px]"
+                  >
+                    {generatingBackup ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {language === 'uk' ? 'Створення...' : 'Creating...'}
+                      </>
+                    ) : (
+                      <>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        {language === 'uk' ? 'Створити бекап' : 'Create Backup'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {language === 'uk' 
+                    ? 'Файл буде завантажено. Розмістіть його в public/backup/ для збереження в проекті.' 
+                    : 'File will be downloaded. Place it in public/backup/ to save in the project.'}
+                </p>
+              </div>
+
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
