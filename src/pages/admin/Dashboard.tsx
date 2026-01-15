@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { FileText, Plus, LogOut, BarChart3, HardDrive, Users } from 'lucide-react';
+import { FileText, Plus, LogOut, BarChart3, HardDrive, Users, Mail } from 'lucide-react';
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -169,6 +169,29 @@ const Dashboard = () => {
               <Button className="w-full" onClick={() => navigate('/admin/crm')}>
                 <Users className="mr-2 h-4 w-4" />
                 {t({ uk: 'Відкрити CRM', en: 'Open CRM' })}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-large transition-all duration-300">
+            <CardHeader>
+              <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-2">
+                <Mail className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <CardTitle>
+                {t({ uk: 'Email налаштування', en: 'Email Settings' })}
+              </CardTitle>
+              <CardDescription>
+                {t({ 
+                  uk: 'Налаштування сповіщень електронною поштою', 
+                  en: 'Email notification settings' 
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => navigate('/admin/email-settings')}>
+                <Mail className="mr-2 h-4 w-4" />
+                {t({ uk: 'Налаштувати Email', en: 'Configure Email' })}
               </Button>
             </CardContent>
           </Card>

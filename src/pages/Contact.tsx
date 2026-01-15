@@ -20,6 +20,7 @@ interface ContactInfo {
 const Contact = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -71,16 +72,48 @@ const Contact = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: t({ uk: 'Повідомлення надіслано!', en: 'Message sent!' }),
-      description: t({ 
-        uk: "Ми зв'яжемося з вами найближчим часом.", 
-        en: 'We will contact you soon.' 
-      }),
-    });
-    setFormData({ name: '', email: '', phone: '', message: '' });
+    setIsSubmitting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-email', {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: formData.message,
+          language
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: t({ uk: 'Повідомлення надіслано!', en: 'Message sent!' }),
+          description: t({ 
+            uk: "Ми зв'яжемося з вами найближчим часом.", 
+            en: 'We will contact you soon.' 
+          }),
+        });
+        setFormData({ name: '', email: '', phone: '', message: '' });
+      } else {
+        throw new Error(data.error || 'Failed to send message');
+      }
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      toast({
+        title: t({ uk: 'Помилка', en: 'Error' }),
+        description: t({ 
+          uk: 'Не вдалося надіслати повідомлення. Спробуйте пізніше.', 
+          en: 'Failed to send message. Please try again later.' 
+        }),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactItems = [
@@ -201,8 +234,16 @@ const Contact = () => {
                     required
                   />
                 </div>
-                <Button type="submit" size="lg" className="w-full md:w-auto shadow-medium">
-                  {t({ uk: 'Надіслати', en: 'Send' })}
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full md:w-auto shadow-medium"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting 
+                    ? t({ uk: 'Надсилання...', en: 'Sending...' })
+                    : t({ uk: 'Надіслати', en: 'Send' })
+                  }
                 </Button>
               </form>
             </CardContent>
