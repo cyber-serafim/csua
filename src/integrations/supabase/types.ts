@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_submissions: {
+        Row: {
+          admin_notified: boolean | null
+          client_notified: boolean | null
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string | null
+          status: string
+        }
+        Insert: {
+          admin_notified?: boolean | null
+          client_notified?: boolean | null
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notified?: boolean | null
+          client_notified?: boolean | null
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       content_block_translations: {
         Row: {
           block_id: string
@@ -399,6 +435,57 @@ export type Database = {
           unique_visitors?: number | null
           updated_at?: string | null
           vpn_visits?: number | null
+        }
+        Relationships: []
+      }
+      email_settings: {
+        Row: {
+          admin_email: string
+          admin_subject_en: string
+          admin_subject_uk: string
+          client_message_en: string
+          client_message_uk: string
+          client_subject_en: string
+          client_subject_uk: string
+          created_at: string
+          id: string
+          notify_admin: boolean
+          notify_client: boolean
+          sender_email: string
+          sender_name: string
+          updated_at: string
+        }
+        Insert: {
+          admin_email?: string
+          admin_subject_en?: string
+          admin_subject_uk?: string
+          client_message_en?: string
+          client_message_uk?: string
+          client_subject_en?: string
+          client_subject_uk?: string
+          created_at?: string
+          id?: string
+          notify_admin?: boolean
+          notify_client?: boolean
+          sender_email?: string
+          sender_name?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_email?: string
+          admin_subject_en?: string
+          admin_subject_uk?: string
+          client_message_en?: string
+          client_message_uk?: string
+          client_subject_en?: string
+          client_subject_uk?: string
+          created_at?: string
+          id?: string
+          notify_admin?: boolean
+          notify_client?: boolean
+          sender_email?: string
+          sender_name?: string
+          updated_at?: string
         }
         Relationships: []
       }
